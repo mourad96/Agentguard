@@ -59,6 +59,11 @@ class AgentGuardConfig:
     prism_output: str = "latest_model.prism"
     use_storm: bool = False
     reward_name: str = "cycles"
+    seed_from_previous: bool = True
+    # Controls how many virtual counts each probability unit contributes when
+    # loading a previous PRISM model.  Higher → historical data dominates longer.
+    # Lower → new live transitions shift the model faster (useful for demos).
+    seed_weight: int = 100
 
     # ── Convenience helpers ───────────────────────────────────────────
 
@@ -162,6 +167,9 @@ def load_config(path: str | Path) -> AgentGuardConfig:
     props_raw: Dict[str, str] = raw.get("properties", {})
     properties = _build_property_definitions(props_raw, thresholds)
 
+    seed_from_previous: bool = bool(raw.get("seed_from_previous", True))
+    seed_weight: int = int(raw.get("seed_weight", 100))
+
     return AgentGuardConfig(
         agent_name=agent_name,
         verification_interval=verification_interval,
@@ -169,4 +177,6 @@ def load_config(path: str | Path) -> AgentGuardConfig:
         actions=actions,
         properties=properties,
         thresholds=thresholds,
+        seed_from_previous=seed_from_previous,
+        seed_weight=seed_weight,
     )

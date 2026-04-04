@@ -53,11 +53,17 @@ class MDPModel:
         for name in state_names:
             self._states.add(name)
 
-    def load_from_prism(self, prism_path: str) -> None:
-        """Parse an existing PRISM file to seed the MDP with previous probabilities."""
+    def load_from_prism(self, prism_path: str, seed_weight: int = 100) -> None:
+        """Parse an existing PRISM file to seed the MDP with previous probabilities.
+
+        ``seed_weight`` controls how many virtual counts each probability unit
+        contributes (e.g. prob=0.50 with seed_weight=100 → 50 counts; with
+        seed_weight=5 → 2 counts).  A lower value makes the seed lighter so
+        that subsequent live transitions shift the model more quickly.
+        """
         if not os.path.exists(prism_path):
             return
-            
+
         with open(prism_path, "r", encoding="utf-8") as f:
             content = f.read()
 
@@ -71,7 +77,7 @@ class MDPModel:
             # with single-state action labels that appear later in the file.
             if sid not in id_to_name:
                 id_to_name[sid] = name
-            
+
         # Parse transitions [action] s=from -> prob:(s'=to) + ...
         # Example: [submit_tx] s=3 -> 0.1250:(s'=0) + 0.7500:(s'=1) + 0.1250:(s'=2);
         for match in re.finditer(r'\[([^\]]+)\] s=(\d+) -> (.*?);', content):
@@ -80,23 +86,26 @@ class MDPModel:
                 continue
             from_id = int(match.group(2))
             from_state = id_to_name.get(from_id, f"unknown_{from_id}")
-            
-            # parse branches e.g. 0.1250:(s'=0)
+
             branches = match.group(3)
             for b_match in re.finditer(r'([\d\.]+):\(s\'=(\d+)\)', branches):
                 prob = float(b_match.group(1))
                 to_id = int(b_match.group(2))
                 to_state = id_to_name.get(to_id, f"unknown_{to_id}")
-                
-                # Convert prob back to observed count (scale by 100 so prob=0.1250 becomes 12 counts)
-                count = max(1, int(prob * 100))
+
+                # Convert probability to virtual counts using seed_weight.
+                # At least 1 count so every observed branch is represented.
+                count = max(1, int(prob * seed_weight))
                 self._counts[(from_state, action)][to_state] += count
                 self._total_transitions += count
                 self._states.add(from_state)
                 self._states.add(to_state)
                 self._actions.add(action)
-                
-        logger.info("Seeded MDP from %s (%d past transition weights loaded)", prism_path, self._total_transitions)
+
+        logger.info(
+            "Seeded MDP from %s (%d past transition weights loaded, seed_weight=%d)",
+            prism_path, self._total_transitions, seed_weight,
+        )
 
     # ── Mutation ──────────────────────────────────────────────────────
 

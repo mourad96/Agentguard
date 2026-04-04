@@ -2,15 +2,22 @@ agent:
   name: "LiquidationBot"
   verification_interval: 5  # Check every 5 transitions (aggressive for high-stakes)
 
+# Seed from the previous healthy run so it acts as a baseline.
+# seed_weight controls how many virtual counts each probability unit gets;
+# keeping it small (5) means ~30 virtual transitions instead of ~500,
+# so the stuck-in-loop transitions can visibly shift the model within the demo.
+seed_from_previous: true
+seed_weight: 5
+
 states:
-  - "Opportunity_Spotted"  # S5
-  - "TX_Construction"      # S0
-  - "Network_Error"        # S1
-  - "On_Chain_Revert"      # S2
-  - "TX_Confirmed"         # S3
+  - "Opportunity_Spotted"  # initial state (highest ID)
+  - "TX_Construction"
+  - "Network_Error"
+  - "On_Chain_Revert"
+  - "TX_Confirmed"
 
 properties:
-  min_expected_cycles: "Rmin=?[ F \"TX_Confirmed\" ]" # Maps to Expected Gas
+  min_expected_cycles: "Rmin=?[ F \"TX_Confirmed\" ]"  # Expected gas cost
   max_prob_success: "Pmax=? [ F \"TX_Confirmed\" ]"
   prob_stuck_in_revert: "Pmax=? [ G !\"TX_Confirmed\" ]"
 
@@ -18,8 +25,9 @@ actions:
   - "fetch_data"
   - "submit_tx"
   - "adjust_params"
+  - "finalize"
 
 safety_thresholds:
-  min_prob_success: 0.80        # Kill if P(success) < 20%
-  max_expected_cycles: 10.0     # Kill if expected cost > 10 gas units
-  max_prob_missing_critical: 0.8  # Kill if P(never confirming) > 80%
+  min_prob_success: 0.80        # Intervene if P(eventual success) < 80%
+  max_expected_cycles: 10.0     # Intervene if expected steps > 10 (gas drain signal)
+  max_prob_missing_critical: 0.8

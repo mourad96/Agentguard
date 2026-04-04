@@ -48,7 +48,10 @@ class AnalyzerThread(threading.Thread):
         # the generated PRISM model, even before those states are visited.
         self._mdp.seed_states(config.states)
         self._prism_output = config.verification.prism_output
-        self._mdp.load_from_prism(self._prism_output)
+        if config.seed_from_previous:
+            self._mdp.load_from_prism(self._prism_output, seed_weight=config.seed_weight)
+        else:
+            logger.info("seed_from_previous=false -- starting with a clean MDP")
         self._converter = PRISMConverter(config)
         self._checker = create_checker(use_storm=config.verification.use_storm)
         self._actuator = Actuator(
