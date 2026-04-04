@@ -75,8 +75,10 @@ The POC includes a **mock model checker** by default for portability. To use the
 
 ```bash
 # Build and run the Docker container
-docker build -t agentguard-rv .
-docker run --rm agentguard-rv
+docker build -t agentguard .
+# Use volume mounting to persist latest_model.prism
+# (On Windows Git Bash, MSYS_NO_PATHCONV=1 avoids path conversion issues)
+MSYS_NO_PATHCONV=1 docker run --rm -v "${PWD}:/app" agentguard
 ```
 
 Or set the environment variable:

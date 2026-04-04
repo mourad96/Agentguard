@@ -44,6 +44,9 @@ class AnalyzerThread(threading.Thread):
 
         # Core components
         self._mdp = MDPModel(initial_state=config.initial_state)
+        # Pre-register all config states so labels are always present in
+        # the generated PRISM model, even before those states are visited.
+        self._mdp.seed_states(config.states)
         self._converter = PRISMConverter(config)
         self._checker = create_checker(use_storm=config.verification.use_storm)
         self._actuator = Actuator(

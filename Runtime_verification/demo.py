@@ -92,12 +92,15 @@ class AgentGuardSim:
         "Init": [
             ("read_file", "Analyzing", 1.00),
         ],
-        # From Analyzing: write_fix moves to Fix_Success or Fix_Failed
+        # From Analyzing:
+        #   - write_fix always succeeds -> Fix_Success (deterministic)
+        #   - run_tests is probabilistic: 50% Fix_Failed, 50% Error
         "Analyzing": [
             ("write_fix", "Fix_Success", 0.50),
-            ("run_tests", "Fix_Failed",  0.50),
+            ("run_tests", "Fix_Failed",  0.25),
+            ("run_tests", "Error",       0.25),
         ],
-        # From Fix_Success: finalise and return to Init (or stop)
+        # From Fix_Success: finalise and return to Init
         "Fix_Success": [
             ("finalize", "Init", 1.00),
         ],
@@ -105,9 +108,9 @@ class AgentGuardSim:
         "Fix_Failed": [
             ("read_file", "Analyzing", 1.00),
         ],
-        # From Error: recover by reading file
+        # From Error: recover by reading file back to Init
         "Error": [
-            ("read_file", "Analyzing", 1.00),
+            ("read_file", "Init", 1.00),
         ],
     }
 

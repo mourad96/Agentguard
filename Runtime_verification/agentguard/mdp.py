@@ -45,6 +45,12 @@ class MDPModel:
         )
         self._total_transitions: int = 0
 
+    def seed_states(self, state_names: list[str]) -> None:
+        """Pre-register states from config so they appear in all models,
+        even before being observed in transitions."""
+        for name in state_names:
+            self._states.add(name)
+
     # ── Mutation ──────────────────────────────────────────────────────
 
     def add_transition(

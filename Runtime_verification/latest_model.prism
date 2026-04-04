@@ -1,27 +1,34 @@
-// AgentGuard — auto-generated PRISM model
 mdp
 
 module agent
-  s : [0..4] init 0;
+    s : [0..5] init 5;
 
-  [search] s=0 -> 1.000000 : (s'=2);
-  [summarize] s=2 -> 1.000000 : (s'=3);
-  [write] s=3 -> 1.000000 : (s'=4);
-  [finish] s=4 -> 1.000000 : (s'=1);
-  [_stay] s=1 -> 1.000000 : (s'=1);
-
+    [run_tests] s=0 -> 0.5000:(s'=1) + 0.5000:(s'=2);
+    [write_fix] s=0 -> 1.0000:(s'=3);
+    [read_file] s=1 -> 1.0000:(s'=5);
+    [read_file] s=2 -> 1.0000:(s'=0);
+    [finalize] s=3 -> 1.0000:(s'=5);
+    [read_file] s=5 -> 1.0000:(s'=0);
+    [wait] s=4 -> 1.0:(s'=4);
 endmodule
 
-// --- Labels ---
-label "goal" = s=1;
-label "did_finish" = s=1;
-label "did_search" = s=2;
-label "did_summarize" = s=3;
-label "did_write" = s=4;
+label "Analyzing" = s=0;
+label "Error" = s=1;
+label "Fix_Failed" = s=2;
+label "Fix_Success" = s=3;
+label "Fixing" = s=4;
+label "Init" = s=5;
+label "finalize" = s=3;
+label "read_file" = s=1 | s=2 | s=5;
+label "run_tests" = s=0;
+label "write_fix" = s=0;
 
-rewards "steps"
-  [search] s=0 : 1;
-  [summarize] s=2 : 1;
-  [write] s=3 : 1;
-  [finish] s=4 : 1;
+rewards "cycles"
+    [run_tests] s=0 : 1.00;
+    [write_fix] s=0 : 1.00;
+    [read_file] s=1 : 1.00;
+    [read_file] s=2 : 1.00;
+    [finalize] s=3 : 1.00;
+    [read_file] s=5 : 1.00;
+    [wait] s=4 : 1.0;
 endrewards
