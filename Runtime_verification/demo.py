@@ -79,43 +79,41 @@ class AgentGuardSim:
     A mock agent that transitions through states with designed probabilities.
 
     Transition probabilities:
-      Init        -> Analyzing   (read_file)  -- always
-      Analyzing   -> Fix_Failed  (write_fix)  -- goes via Fixing conceptually
-                 or Fix_Success  (run_tests)  -- 50/50 after write_fix
-      Fix_Success -> Init        (finalize)   -- always (loop or done)
-      Fix_Failed  -> Analyzing   (read_file)  -- always (retry loop)
-      Error       -> Analyzing   (read_file)  -- always (recover)
+      Opportunity_Spotted -> TX_Construction   (fetch_data)  -- always
+      TX_Construction     -> On_Chain_Revert   (submit_tx)   -- failures
+                          or TX_Confirmed      (submit_tx)   -- 50/50 success
+      TX_Confirmed        -> Opportunity_Spotted (finalize)  -- always (loop or done)
+      On_Chain_Revert     -> TX_Construction   (fetch_data)  -- always (retry loop)
+      Network_Error       -> Opportunity_Spotted (fetch_data)-- always (recover)
     """
 
     TRANSITIONS = {
-        # From Init: always read the file to start Analyzing
-        "Init": [
-            ("read_file", "Analyzing", 1.00),
+        # From Opportunity_Spotted: always fetch data
+        "Opportunity_Spotted": [
+            ("fetch_data", "TX_Construction", 1.00),
         ],
-        # From Analyzing:
-        #   - write_fix always succeeds -> Fix_Success (deterministic)
-        #   - run_tests is probabilistic: 50% Fix_Failed, 50% Error
-        "Analyzing": [
-            ("write_fix", "Fix_Success", 0.50),
-            ("run_tests", "Fix_Failed",  0.25),
-            ("run_tests", "Error",       0.25),
+        # From TX_Construction:
+        "TX_Construction": [
+            ("submit_tx", "TX_Confirmed", 0.50),
+            ("submit_tx", "On_Chain_Revert",  0.25),
+            ("submit_tx", "Network_Error",       0.25),
         ],
-        # From Fix_Success: finalise and return to Init
-        "Fix_Success": [
-            ("finalize", "Init", 1.00),
+        # From TX_Confirmed: finalise
+        "TX_Confirmed": [
+            ("finalize", "Opportunity_Spotted", 1.00),
         ],
-        # From Fix_Failed: read file again to retry
-        "Fix_Failed": [
-            ("read_file", "Analyzing", 1.00),
+        # From On_Chain_Revert: retry
+        "On_Chain_Revert": [
+            ("fetch_data", "TX_Construction", 1.00),
         ],
-        # From Error: recover by reading file back to Init
-        "Error": [
-            ("read_file", "Init", 1.00),
+        # From Network_Error: recover
+        "Network_Error": [
+            ("fetch_data", "Opportunity_Spotted", 1.00),
         ],
     }
 
     def __init__(self) -> None:
-        self.state = "Init"
+        self.state = "Opportunity_Spotted"
         self.successes = 0
         self.max_successes = 3   # stop after 3 successful repairs
 
@@ -136,7 +134,7 @@ class AgentGuardSim:
         prev = self.state
         self.state = next_state
 
-        if next_state == "Fix_Success":
+        if next_state == "TX_Confirmed":
             self.successes += 1
 
         return (prev, action, next_state)
@@ -170,7 +168,7 @@ def main() -> None:
         result = agent.step()
         if result is None:
             print(
-                f"\n  [v] AgentGuard completed {agent.successes} repairs "
+                f"\n  [v] AgentGuard completed {agent.successes} liquidations "
                 f"after {step_count} steps."
             )
             break

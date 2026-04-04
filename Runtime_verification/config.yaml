@@ -4,31 +4,29 @@ agent:
 
 # Define state names for reference and readability, though unseen states will be added dynamically.
 states:
-  - "Init"
-  - "Analyzing"
-  - "Fixing"
-  - "Fix_Success"
-  - "Fix_Failed"
-  - "Error"
+  - "Opportunity_Spotted"
+  - "TX_Construction"
+  - "TX_Confirmed"
+  - "On_Chain_Revert"
+  - "Network_Error"
 
 # Define the properties to verify
 properties:
   # Expected minimum cycles/reward to finish (cost)
-  # R{"cycles"}min=? [ F "Fix_Success" ] represents expected minimum reward "cycles".
-  # Wait, standard expected reward in PRISM syntax is R{"cycles"}min=? [ F "Fix_Success" ]
-  min_expected_cycles: "Rmin=?[ F \"Fix_Success\" ]"
+  # R{"cycles"}min=? [ F "TX_Confirmed" ] represents expected minimum reward "cycles".
+  # Wait, standard expected reward in PRISM syntax is R{"cycles"}min=? [ F "TX_Confirmed" ]
+  min_expected_cycles: "Rmin=?[ F \"TX_Confirmed\" ]"
 
-  # Max probability of successfully reaching the "Fix_Success" state
-  max_prob_success: "Pmax=? [ F \"Fix_Success\" ]"
+  # Max probability of successfully reaching the "TX_Confirmed" state
+  max_prob_success: "Pmax=? [ F \"TX_Confirmed\" ]"
 
-  # Max probability of NOT invoking write_fix globally
-  prob_missing_critical_action: "Pmax=? [ G !\"write_fix\" ]"
+  # Max probability of NOT invoking submit_tx globally
+  prob_missing_critical_action: "Pmax=? [ G !\"submit_tx\" ]"
 
 # Actions the agent can perform
 actions:
-  - "read_file"
-  - "run_tests"
-  - "write_fix"
+  - "fetch_data"
+  - "submit_tx"
   - "finalize"
 
 safety_thresholds:
