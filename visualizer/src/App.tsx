@@ -17,9 +17,21 @@ export default function App() {
   const [metricsHistory, setMetricsHistory] = useState<MetricPoint[]>(initialMetrics);
   const [properties, setProperties] = useState<AGProperty[]>(INITIAL_PROPERTIES);
   const [isSimulating, setIsSimulating] = useState(false);
-  const [activeNodeIdx, setActiveNodeIdx] = useState(0);
+  const [activeNode, setActiveNode] = useState("Opportunity_Spotted");
+  const [stutterCount, setStutterCount] = useState(0);
+  const [isHalted, setIsHalted] = useState(false);
 
-  const activeNode = mockTransitions[activeNodeIdx % mockTransitions.length].from;
+  useEffect(() => {
+    const hasViolation = properties.some(p => p.status === "[VIOLATED]") || 
+                         properties.some(p => (p.name === "max_prob_success" && p.value < p.threshold) || 
+                                              (p.name === "min_expected_cycles" && p.value > p.threshold));
+    if (hasViolation && isSimulating) {
+      setIsHalted(true);
+      setIsSimulating(false);
+    } else if (!hasViolation && isHalted) {
+      setIsHalted(false);
+    }
+  }, [properties, isSimulating, isHalted]);
 
   const handleOverride = (name: string, valueStr: string) => {
     const val = parseFloat(valueStr);
@@ -74,7 +86,31 @@ export default function App() {
             });
           }
           
-          setActiveNodeIdx(idx => idx + 1);
+          setActiveNode(curr => {
+            const available = mockTransitions.filter(t => t.from === curr);
+            if (available.length === 0) return curr;
+            
+            const r = Math.random();
+            let cum = 0;
+            let next = available[available.length - 1].to;
+            for (const t of available) {
+              const prob = t.probability ?? 1.0;
+              cum += prob;
+              if (r <= cum) {
+                next = t.to;
+                break;
+              }
+            }
+
+            if (curr === "TX_Construction" && next === "On_Chain_Revert") {
+              setStutterCount(c => c + 1);
+            } else if (curr === "TX_Construction" && next !== "On_Chain_Revert") {
+              setStutterCount(0);
+            }
+
+            return next;
+          });
+
           return nextStep;
         });
       }, 600); 
@@ -156,7 +192,12 @@ export default function App() {
               <span className="panel__badge">React Flow</span>
             </div>
             <ReactFlowProvider>
-              <StateTransitionGraph transitions={mockTransitions} activeNode={activeNode} />
+              <StateTransitionGraph 
+                transitions={mockTransitions} 
+                activeNode={activeNode} 
+                isHalted={isHalted}
+                isStuttering={stutterCount > 2}
+              />
             </ReactFlowProvider>
           </div>
         </section>

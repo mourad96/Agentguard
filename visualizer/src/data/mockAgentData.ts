@@ -6,6 +6,8 @@ export type TransitionRecord = {
   from: string;
   action: string;
   to: string;
+  probability?: number;
+  labelStr?: string;
 };
 
 export type MetricPoint = {
@@ -34,7 +36,7 @@ export const INITIAL_PROPERTIES: AGProperty[] = [
   {
     name: "max_prob_success",
     value: 1.0000,
-    threshold: 0.8,
+    threshold: 0.2,
     direction: "above",
     status: "[OK]"
   },
@@ -48,11 +50,12 @@ export const INITIAL_PROPERTIES: AGProperty[] = [
 ];
 
 export const mockTransitions: TransitionRecord[] = [
-  { from: "idle", action: "search", to: "searching" },
-  { from: "searching", action: "summarize", to: "summarizing" },
-  { from: "summarizing", action: "report", to: "writing" },
-  { from: "writing", action: "finish", to: "done" },
-  { from: "searching", action: "fail", to: "error" },
+  { from: "Opportunity_Spotted", action: "start", to: "TX_Construction", probability: 1.0, labelStr: "100% Success" },
+  { from: "TX_Construction", action: "confirm", to: "TX_Confirmed", probability: 0.2, labelStr: "20% Success" },
+  { from: "TX_Construction", action: "network_err", to: "Network_Error", probability: 0.3, labelStr: "30% NetworkErr" },
+  { from: "TX_Construction", action: "revert", to: "On_Chain_Revert", probability: 0.5, labelStr: "50% Revert" },
+  { from: "On_Chain_Revert", action: "retry", to: "TX_Construction", probability: 1.0, labelStr: "Retry" },
+  { from: "Network_Error", action: "reset", to: "Opportunity_Spotted", probability: 1.0, labelStr: "Reset" },
 ];
 
 export const initialMetrics: MetricPoint[] = [

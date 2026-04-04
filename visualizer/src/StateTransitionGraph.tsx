@@ -17,6 +17,8 @@ import type { TransitionRecord } from "./data/mockAgentData";
 type Props = {
   transitions: TransitionRecord[];
   activeNode?: string | null;
+  isHalted?: boolean;
+  isStuttering?: boolean;
 };
 
 function buildFlowFromTransitions(transitions: TransitionRecord[]): {
@@ -65,7 +67,7 @@ function buildFlowFromTransitions(transitions: TransitionRecord[]): {
       nodes.push({
         id,
         position: { x: L * 280, y: i * 120 },
-        data: { label: id.charAt(0).toUpperCase() + id.slice(1) },
+        data: { label: id.replace(/_/g, ' ') },
         style: {
           background: "rgba(20, 25, 35, 0.85)",
           color: "#fff",
@@ -88,7 +90,7 @@ function buildFlowFromTransitions(transitions: TransitionRecord[]): {
     id: `${t.from}-${t.action}-${t.to}-${idx}`,
     source: t.from,
     target: t.to,
-    label: t.action.toUpperCase(),
+    label: t.labelStr ?? t.action.toUpperCase(),
     animated: true,
     markerEnd: { type: MarkerType.ArrowClosed, color: "#6366f1" },
     style: { stroke: "#6366f1", strokeWidth: 2 },
@@ -101,7 +103,7 @@ function buildFlowFromTransitions(transitions: TransitionRecord[]): {
   return { nodes, edges };
 }
 
-export function StateTransitionGraph({ transitions, activeNode }: Props) {
+export function StateTransitionGraph({ transitions, activeNode, isHalted, isStuttering }: Props) {
   const built = useMemo(
     () => buildFlowFromTransitions(transitions),
     [transitions],
@@ -115,21 +117,85 @@ export function StateTransitionGraph({ transitions, activeNode }: Props) {
   }, [built, setNodes, setEdges]);
 
   useEffect(() => {
-    if (activeNode === undefined) return;
     setNodes((nds) =>
       nds.map((n) => {
-        const isActive = n.id === activeNode;
+        let isActive = n.id === activeNode;
+        let isSuccess = n.id === "TX_Confirmed";
+        let isStutterTarget = isStuttering && (n.id === "TX_Construction" || n.id === "On_Chain_Revert");
+        let isHaltedNode = isHalted && n.id === "TX_Construction";
+
+        let border = "1px solid rgba(255, 255, 255, 0.1)";
+        let boxShadow = "0 8px 32px 0 rgba(0, 0, 0, 0.3)";
+        let background = "rgba(20, 25, 35, 0.85)";
+
+        if (isSuccess && isActive) {
+          border = "2px solid #10b981"; // Emerald Green
+          boxShadow = "0 0 24px 6px rgba(16, 185, 129, 0.6)"; // Pulse
+        } else if (isStutterTarget) {
+          border = "2px solid #dc2626"; // Crimson Red
+          boxShadow = "0 0 20px 4px rgba(220, 38, 38, 0.6)"; // Flashing effect
+        } else if (isActive) {
+          border = "2px solid #ec4899";
+          boxShadow = "0 0 20px 4px rgba(236, 72, 153, 0.6)";
+        }
+
+        if (isHaltedNode) {
+          border = "2px solid #ef4444";
+          boxShadow = "0 0 30px 10px rgba(239, 68, 68, 0.8)";
+        }
+
         return {
           ...n,
+          data: {
+            label: (
+              <div style={{ position: "relative" }}>
+                {isHaltedNode && (
+                  <div 
+                    style={{ 
+                      position: 'absolute', top: -30, left: '50%', transform: 'translateX(-50%)', 
+                      background: '#ef4444', color: '#fff', padding: '4px 8px', borderRadius: 4, 
+                      fontSize: 10, fontWeight: 'bold', whiteSpace: 'nowrap', zIndex: 10
+                    }}
+                  >
+                    HALTED BY AGENTGUARD
+                  </div>
+                )}
+                {n.id.replace(/_/g, ' ')}
+              </div>
+            )
+          },
           style: {
             ...n.style,
-            boxShadow: isActive ? "0 0 20px 4px rgba(236, 72, 153, 0.6)" : "0 8px 32px 0 rgba(0, 0, 0, 0.3)",
-            border: isActive ? "2px solid #ec4899" : "1px solid rgba(255, 255, 255, 0.1)",
+            boxShadow,
+            border,
+            background,
           },
         };
       })
     );
-  }, [activeNode, setNodes]);
+
+    setEdges((eds) => 
+      eds.map((e) => {
+        let isStutterEdge = isStuttering && 
+          ((e.source === "TX_Construction" && e.target === "On_Chain_Revert") || 
+           (e.source === "On_Chain_Revert" && e.target === "TX_Construction"));
+        
+        if (isStutterEdge) {
+          return {
+            ...e,
+            style: { stroke: "#dc2626", strokeWidth: 3 },
+            markerEnd: { type: MarkerType.ArrowClosed, color: "#dc2626" },
+          };
+        }
+        
+        return {
+          ...e,
+          style: { stroke: "#6366f1", strokeWidth: 2 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: "#6366f1" },
+        };
+      })
+    );
+  }, [activeNode, setNodes, setEdges, isHalted, isStuttering]);
 
   return (
     <div className="transition-graph">
