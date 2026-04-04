@@ -139,15 +139,13 @@ export function parsePrism(content: string): ParsedPrism {
   const finalEdges: Edge[] = [];
   const seenPairs = new Set<string>();
 
-  // Origin edge
+  // Origin edge — no label text, just the dot and arrow
   const opportunityId = nodes.find(n => n.id.includes('Opportunity'))?.id || 'Opportunity_Spotted';
-  finalEdges.push(makeEdge('e-O-S4', 'O', opportunityId, 'start (1.0000)', {
+  finalEdges.push(makeEdge('e-O-S4', 'O', opportunityId, '', {
     sourceHandle: 'bottom',
     targetHandle: 'top-center',
     edgeType: 'straight',
     animated: false,
-    labelPosition: 0.5,
-    labelOffsetX: 60,
   }));
 
   rawEdges.forEach(({ action, sourceId, targetId, prob }) => {
