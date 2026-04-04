@@ -6,6 +6,7 @@ import {
   YAxis,
   Area,
   AreaChart,
+  ReferenceLine,
 } from "recharts";
 
 import type { MetricPoint } from "./data/mockAgentData";
@@ -27,15 +28,15 @@ export function MetricsPanel({ metrics }: Props) {
   return (
     <div className="metrics-charts">
       <section className="chart-card">
-        <h2 className="chart-card__title">Gas Consumption (Cumulative)</h2>
+        <h2 className="chart-card__title">Max Cycles to Success Probability State</h2>
         <p className="chart-card__hint">
-          API tokens, compute usage, or custom cost metrics.
+          Property: min_expected_cycles
         </p>
         <div className="chart-card__plot">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={metrics} margin={{ top: 16, right: 16, left: 0, bottom: 0 }}>
               <defs>
-                <linearGradient id="colorGas" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="colorCycles" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#ec4899" stopOpacity={0.4} />
                   <stop offset="95%" stopColor="#ec4899" stopOpacity={0} />
                 </linearGradient>
@@ -43,15 +44,16 @@ export function MetricsPanel({ metrics }: Props) {
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
               <XAxis dataKey="step" stroke="#8b9bb4" tick={{ fontSize: 12, fill: "#8b9bb4" }} axisLine={false} tickLine={false} />
               <YAxis stroke="#8b9bb4" tick={{ fontSize: 12, fill: "#8b9bb4" }} axisLine={false} tickLine={false} />
+              <ReferenceLine y={50.0} stroke="#ef4444" strokeDasharray="3 3" />
               <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: "#ec4899" }} />
               <Area
                 type="monotone"
-                dataKey="gas"
-                name="Gas"
+                dataKey="min_expected_cycles"
+                name="Cycles (min)"
                 stroke="#ec4899"
                 strokeWidth={3}
                 fillOpacity={1}
-                fill="url(#colorGas)"
+                fill="url(#colorCycles)"
                 activeDot={{ r: 6, fill: "#ec4899", stroke: "#0f1115", strokeWidth: 2 }}
               />
             </AreaChart>
@@ -62,7 +64,7 @@ export function MetricsPanel({ metrics }: Props) {
       <section className="chart-card">
         <h2 className="chart-card__title">Success Probability</h2>
         <p className="chart-card__hint">
-          Model verification output (e.g. Pmax=? [F &quot;goal&quot;]).
+          Property: max_prob_success
         </p>
         <div className="chart-card__plot">
           <ResponsiveContainer width="100%" height="100%">
@@ -83,14 +85,15 @@ export function MetricsPanel({ metrics }: Props) {
                 axisLine={false}
                 tickLine={false}
               />
+              <ReferenceLine y={0.8} stroke="#ef4444" strokeDasharray="3 3" />
               <Tooltip
                 contentStyle={tooltipStyle}
                 itemStyle={{ color: "#10b981" }}
-                formatter={(value: number) => [`${(value * 100).toFixed(1)}%`, "Success Probability"]}
+                formatter={(value: number) => [`${(value * 100).toFixed(1)}%`, "Success Prob (max)"]}
               />
               <Area
                 type="monotone"
-                dataKey="successProbability"
+                dataKey="max_prob_success"
                 name="Success Probability"
                 stroke="#10b981"
                 strokeWidth={3}

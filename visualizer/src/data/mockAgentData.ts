@@ -1,8 +1,5 @@
 /**
- * 演示数据：之后可换成从后端 / WebSocket / 父组件 props 传入的真实数据。
- *
- * transitions — 与 AgentGuard 的 log_transition(from, action, to) 一致
- * metrics — 每一步的「Gas」与模型检验得到的成功概率（此处为示例数值）
+ * Mock data and types for AgentGuard Dashboard.
  */
 
 export type TransitionRecord = {
@@ -12,15 +9,44 @@ export type TransitionRecord = {
 };
 
 export type MetricPoint = {
-  /** 横轴：第几次检查 / 第几步 */
   step: number;
-  /** Gas：可对应 API token、算力消耗等 */
-  gas: number;
-  /** 成功概率：0~1，对应 PCTL 等验证结果的展示 */
-  successProbability: number;
+  min_expected_cycles: number;
+  max_prob_success: number;
+  prob_missing_critical_action: number;
 };
 
-/** 示例：研究型智能体的状态轨迹（与 Runtime_verification/demo 类似） */
+export type AGProperty = {
+  name: string;
+  value: number;
+  threshold: number;
+  direction: "below" | "above";
+  status: "[OK]" | "[VIOLATED]";
+};
+
+export const INITIAL_PROPERTIES: AGProperty[] = [
+  {
+    name: "min_expected_cycles",
+    value: 2.0000,
+    threshold: 50.0,
+    direction: "below",
+    status: "[OK]"
+  },
+  {
+    name: "max_prob_success",
+    value: 1.0000,
+    threshold: 0.8,
+    direction: "above",
+    status: "[OK]"
+  },
+  {
+    name: "prob_missing_critical_action",
+    value: 0.0000,
+    threshold: 0.1,
+    direction: "below",
+    status: "[OK]"
+  }
+];
+
 export const mockTransitions: TransitionRecord[] = [
   { from: "idle", action: "search", to: "searching" },
   { from: "searching", action: "summarize", to: "summarizing" },
@@ -29,15 +55,6 @@ export const mockTransitions: TransitionRecord[] = [
   { from: "searching", action: "fail", to: "error" },
 ];
 
-/**
- * 示例时间序列：随 step 上升的累计 Gas 与波动中的成功概率。
- * 接入真实数据时，把每次验证周期 push 进来即可。
- */
-export const mockMetrics: MetricPoint[] = [
-  { step: 1, gas: 120, successProbability: 0.58 },
-  { step: 2, gas: 280, successProbability: 0.62 },
-  { step: 3, gas: 410, successProbability: 0.71 },
-  { step: 4, gas: 590, successProbability: 0.68 },
-  { step: 5, gas: 720, successProbability: 0.79 },
-  { step: 6, gas: 880, successProbability: 0.84 },
+export const initialMetrics: MetricPoint[] = [
+  { step: 1, min_expected_cycles: 2.0, max_prob_success: 1.0, prob_missing_critical_action: 0.0 },
 ];
