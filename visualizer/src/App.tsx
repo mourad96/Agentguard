@@ -5,15 +5,12 @@ import { StateTransitionGraph } from "./StateTransitionGraph";
 import { parsePrism } from "./utils/prismParser";
 import { 
   mockTransitions, 
-  INITIAL_PROPERTIES,
-  type AGProperty
 } from "./data/mockAgentData";
 import "./App.css";
 
 export default function App() {
   const [modelName, setModelName] = useState("Default Model");
-  const [step, setStep] = useState(1);
-  const [properties, setProperties] = useState<AGProperty[]>(INITIAL_PROPERTIES);
+  const [properties, setProperties] = useState<any[]>([]);
   const [isSimulating, setIsSimulating] = useState(true);
   const [activeNode, setActiveNode] = useState("Opportunity_Spotted");
   const [stutterCount, setStutterCount] = useState(0);
@@ -21,27 +18,77 @@ export default function App() {
 
   const [graphData, setGraphData] = useState<{ nodes: Node[], edges: Edge[] }>({ nodes: [], edges: [] });
 
-  const refreshModel = useCallback(async (isInitial = false) => {
+  const refreshModel = useCallback(async () => {
     try {
-      const res = await fetch("/model.prism");
+      // 1. Refresh Graph
+      const res = await fetch("/model.prism?" + Date.now());
       if (!res.ok) throw new Error("Failed to fetch model.prism");
       const content = await res.text();
       const parsed = parsePrism(content);
       setGraphData(parsed);
-      if (!isInitial) {
+
+      // 2. Fetch and Parse Metrics from modeloutput.txt
+      const resMetrics = await fetch("/modeloutput.txt?" + Date.now());
+      if (!resMetrics.ok) throw new Error("Failed to fetch modeloutput.txt");
+      const csvContent = await resMetrics.text();
+      
+      const rows = csvContent.trim().split("\n");
+      const parsedProps = rows.slice(1).map(row => {
+          const parts = row.split(",");
+          const property = parts[0];
+          const value = parseFloat(parts[1]);
+          const thresholdStr = parts[2];
+          const thresholdVal = thresholdStr === "N/A" ? NaN : parseFloat(thresholdStr);
+          
+          let status: "[OK]" | "[X]" = "[OK]";
+          if (property === "min_expected_cycles") {
+              // Rule from User: OK if Threshold >= Value
+              if (!isNaN(thresholdVal)) {
+                  status = thresholdVal >= value ? "[OK]" : "[X]";
+              }
+          } else if (property === "max_prob_success") {
+              // Rule from User: OK if Threshold <= Value
+              if (!isNaN(thresholdVal)) {
+                  status = thresholdVal <= value ? "[OK]" : "[X]";
+              }
+          } else if (property === "prob_stuck_in_revert") {
+              // Rule from User: OK if Threshold >= Value
+              if (thresholdStr === "N/A") {
+                  status = "[OK]";
+              } else if (!isNaN(thresholdVal)) {
+                  status = thresholdVal >= value ? "[OK]" : "[X]";
+              }
+          }
+          
+          return {
+              name: property,
+              value: value,
+              threshold: thresholdStr,
+              status: status
+          };
+      });
+      
+      setProperties(parsedProps);
+
+      // 3. Update Model Name and Status
+      const hasFailure = parsedProps.some(p => p.status === "[X]");
+      if (hasFailure) {
         setModelName("Failure Scenario");
+      } else {
+        setModelName("Default Model");
       }
+
     } catch (err) {
       console.error("Error refreshing model:", err);
     }
   }, []);
 
   useEffect(() => {
-    refreshModel(true);
+    refreshModel();
   }, [refreshModel]);
 
   useEffect(() => {
-    const hasViolation = properties.some(p => p.status === "[VIOLATED]") || isHalted;
+    const hasViolation = properties.some(p => p.status === "[X]") || isHalted;
     if (hasViolation && isSimulating) {
       setIsHalted(true);
       setIsSimulating(false);
@@ -52,35 +99,9 @@ export default function App() {
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
-    if (isSimulating) {
+    if (isSimulating && !isHalted) {
       interval = setInterval(() => {
-        setStep(s => {
-          const nextStep = s + 1;
-          
-          if (nextStep % 3 === 0) {
-            setProperties(prev => {
-              const newProps = [...prev];
-              
-              const probIndex = newProps.findIndex(p => p.name === "max_prob_success");
-              if (probIndex !== -1) {
-                // Diminish Pmax as stutterCount increases
-                // Base 0.746 (prob of s2 before s0)
-                let newVal = 0.746 * Math.pow(0.85, stutterCount);
-                newProps[probIndex].value = newVal;
-                newProps[probIndex].status = newVal >= newProps[probIndex].threshold ? "[OK]" : "[VIOLATED]";
-              }
-
-              const cyclesIndex = newProps.findIndex(p => p.name === "min_expected_cycles");
-              if (cyclesIndex !== -1) {
-                // Increase Rmin as stutterCount increases (simulating gas/time cost)
-                let newVal = 2.5 + (stutterCount * 4) + (Math.random() * 2);
-                newProps[cyclesIndex].value = newVal;
-                newProps[cyclesIndex].status = newVal <= newProps[cyclesIndex].threshold ? "[OK]" : "[VIOLATED]";
-              }
-
-              return newProps;
-            });
-          }
+          // Properties are now managed via modeloutput.txt refresh
           
           setActiveNode(curr => {
             const available = mockTransitions.filter(t => t.from === curr);
@@ -114,9 +135,6 @@ export default function App() {
 
             return next;
           });
-
-          return nextStep;
-        });
       }, 700); 
     }
     return () => clearInterval(interval);
@@ -135,11 +153,13 @@ export default function App() {
         <div className="header__controls">
           <button 
             className="btn-simulate active"
-            onClick={() => refreshModel(false)}
+            onClick={() => refreshModel()}
           >
             🔄 Refresh Diagram
           </button>
-          <span className="step-counter">{modelName}</span>
+          <span className={`step-counter ${modelName === "Failure Scenario" ? "step-counter--failure" : ""}`}>
+            {modelName}
+          </span>
         </div>
       </header>
 
@@ -157,17 +177,17 @@ export default function App() {
                     <th>Property</th>
                     <th>Value</th>
                     <th>Threshold</th>
-                    <th>Dir</th>
                     <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {properties.map(p => (
-                    <tr key={p.name} className={p.status === "[VIOLATED]" ? "row-violated" : ""}>
+                    <tr key={p.name} className={p.status === "[X]" ? "row-violated" : ""}>
                       <td className="prop-name">{p.name}</td>
-                      <td>{p.value.toFixed(4)}</td>
+                      <td className={p.status === "[X]" ? "value-error" : ""}>
+                        {p.value.toFixed(4)}
+                      </td>
                       <td>{p.threshold}</td>
-                      <td>{p.direction}</td>
                       <td className={`status ${p.status === "[OK]" ? "status-ok" : "status-viol"}`}>
                         {p.status}
                       </td>

@@ -179,6 +179,18 @@
   font-weight: 700;
 }
 
+.value-error {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.step-counter--failure {
+  color: #fff;
+  background: rgba(239, 68, 68, 0.25);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+}
+
 
 
 .header__controls {
