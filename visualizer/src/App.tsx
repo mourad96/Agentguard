@@ -192,17 +192,14 @@ export default function App() {
             </div>
           </div>
 
-          <div className="panel panel--graph" aria-label="State Transition Diagram">
+          <div className="panel panel--graph" aria-label="Agent Architecture">
             <div className="panel__head">
-              <h2 className="panel__title">State Transition Diagram</h2>
-              <span className="panel__badge">React Flow</span>
+              <h2 className="panel__title">Agent State Machine</h2>
+              <span className="panel__badge">Architecture Reference</span>
             </div>
             <ReactFlowProvider>
               <StateTransitionGraph 
-                transitions={mockTransitions} 
                 activeNode={activeNode} 
-                isHalted={isHalted}
-                isStuttering={stutterCount > 2}
               />
             </ReactFlowProvider>
           </div>
