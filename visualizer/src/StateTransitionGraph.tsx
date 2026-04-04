@@ -5,6 +5,7 @@ import {
   MarkerType,
   Handle,
   Position,
+<<<<<<< HEAD
   BaseEdge,
   EdgeLabelRenderer,
   getStraightPath,
@@ -13,6 +14,11 @@ import {
   type Edge,
   type NodeProps,
   type EdgeProps,
+=======
+  type Node,
+  type Edge,
+  type NodeProps,
+>>>>>>> 3105a2ce4127bf96af67103e14454b65acb55bff
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -40,6 +46,7 @@ const nodeStyle = (isActive: boolean) => ({
 const StateMachineNode = ({ data, selected }: NodeProps) => {
   return (
     <div style={nodeStyle(!!selected)}>
+<<<<<<< HEAD
       {/* Top Handles */}
       <Handle type="target" position={Position.Top} id="top-center" style={{ left: '50%', background: 'transparent', border: 'none' }} />
       <Handle type="target" position={Position.Top} id="top-left" style={{ left: '15%', background: 'transparent', border: 'none' }} />
@@ -53,6 +60,22 @@ const StateMachineNode = ({ data, selected }: NodeProps) => {
       <Handle type="target" position={Position.Bottom} id="target-bottom-right" style={{ left: '85%', background: 'transparent', border: 'none' }} />
 
       {/* Side Handles */}
+=======
+      {/* Dynamic Handles for strictly vertically distinct lines */}
+      {/* Top Handles (both source and target) */}
+      <Handle type="target" position={Position.Top} id="top-center" style={{ left: '50%', background: 'transparent', border: 'none' }} />
+      <Handle type="target" position={Position.Top} id="top-left" style={{ left: '30%', background: 'transparent', border: 'none' }} />
+      <Handle type="target" position={Position.Top} id="top-right" style={{ left: '70%', background: 'transparent', border: 'none' }} />
+      <Handle type="source" position={Position.Top} id="source-top-right" style={{ left: '70%', background: 'transparent', border: 'none' }} />
+      
+      {/* Bottom Handles (both source and target) */}
+      <Handle type="source" position={Position.Bottom} id="bottom-center" style={{ left: '50%', background: 'transparent', border: 'none' }} />
+      <Handle type="source" position={Position.Bottom} id="bottom-left" style={{ left: '30%', background: 'transparent', border: 'none' }} />
+      <Handle type="source" position={Position.Bottom} id="bottom-right" style={{ left: '70%', background: 'transparent', border: 'none' }} />
+      <Handle type="target" position={Position.Bottom} id="target-bottom-right" style={{ left: '70%', background: 'transparent', border: 'none' }} />
+
+      {/* Side Handles for wrap-around paths */}
+>>>>>>> 3105a2ce4127bf96af67103e14454b65acb55bff
       <Handle type="source" position={Position.Left} id="left-source" style={{ top: '50%', background: 'transparent', border: 'none' }} />
       <Handle type="target" position={Position.Left} id="left-target" style={{ top: '50%', background: 'transparent', border: 'none' }} />
       <Handle type="source" position={Position.Right} id="right-source" style={{ top: '50%', background: 'transparent', border: 'none' }} />
@@ -69,6 +92,7 @@ const OriginNode = () => (
   </div>
 );
 
+<<<<<<< HEAD
 // Custom edge that supports labelOffsetX / labelOffsetY via edge.data
 function OffsetEdge({
   id,
@@ -146,11 +170,14 @@ function OffsetEdge({
   );
 }
 
+=======
+>>>>>>> 3105a2ce4127bf96af67103e14454b65acb55bff
 const nodeTypes = {
   stateNode: StateMachineNode,
   originNode: OriginNode,
 };
 
+<<<<<<< HEAD
 const edgeTypes = {
   offsetEdge: OffsetEdge,
 };
@@ -158,6 +185,15 @@ const edgeTypes = {
 const defaultEdgeOptions = {
   animated: true,
   style: { stroke: "#6366f1", strokeWidth: 4 },
+=======
+const defaultEdgeOptions = {
+  animated: true,
+  style: { stroke: "#6366f1", strokeWidth: 3 },
+  labelStyle: { fill: "#cbd5e1", fontWeight: 700, fontSize: 15 },
+  labelBgStyle: { fill: "#020617", fillOpacity: 0.9 },
+  labelBgPadding: [8, 6] as [number, number],
+  labelBgBorderRadius: 6,
+>>>>>>> 3105a2ce4127bf96af67103e14454b65acb55bff
   markerEnd: {
     type: MarkerType.ArrowClosed,
     color: "#6366f1",
@@ -168,6 +204,10 @@ export function StateTransitionGraph({ activeNode, nodes = [], edges = [] }: Pro
   const styledNodes = useMemo(() => nodes.map(node => ({
     ...node,
     selected: node.id === activeNode,
+<<<<<<< HEAD
+=======
+    // Add type if not present based on data content
+>>>>>>> 3105a2ce4127bf96af67103e14454b65acb55bff
     type: node.id === 'O' ? 'originNode' : 'stateNode',
   })), [nodes, activeNode]);
 
@@ -177,7 +217,10 @@ export function StateTransitionGraph({ activeNode, nodes = [], edges = [] }: Pro
         nodes={styledNodes}
         edges={edges}
         nodeTypes={nodeTypes}
+<<<<<<< HEAD
         edgeTypes={edgeTypes}
+=======
+>>>>>>> 3105a2ce4127bf96af67103e14454b65acb55bff
         defaultEdgeOptions={defaultEdgeOptions}
         fitView
         fitViewOptions={{ padding: 0.22 }}
