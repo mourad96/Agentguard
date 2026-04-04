@@ -20,6 +20,7 @@ type Props = {
   activeNode?: string | null;
   nodes?: Node[];
   edges?: Edge[];
+  showEdges?: boolean;
 };
 
 const nodeStyle = (isActive: boolean) => ({
@@ -164,18 +165,31 @@ const defaultEdgeOptions = {
   },
 };
 
-export function StateTransitionGraph({ activeNode, nodes = [], edges = [] }: Props) {
+export function StateTransitionGraph({ activeNode, nodes = [], edges = [], showEdges = true }: Props) {
   const styledNodes = useMemo(() => nodes.map(node => ({
     ...node,
     selected: node.id === activeNode,
     type: node.id === 'O' ? 'originNode' : 'stateNode',
   })), [nodes, activeNode]);
 
+  // On round 1, only show the origin edge (dot + arrow to S4), hide all transition edges.
+  // From round 2+, show all edges including labels.
+  const visibleEdges = useMemo(() => {
+    if (showEdges) return edges;
+    // Only keep the origin edge (dot → S4), but strip its label text
+    return edges
+      .filter(e => e.id === 'e-O-S4')
+      .map(e => ({
+        ...e,
+        data: { ...(e.data as Record<string, any>), labelText: '' },
+      }));
+  }, [edges, showEdges]);
+
   return (
     <div style={{ width: "100%", height: "100%", background: "#020617" }}>
       <ReactFlow
         nodes={styledNodes}
-        edges={edges}
+        edges={visibleEdges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
