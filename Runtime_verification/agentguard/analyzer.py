@@ -121,10 +121,8 @@ class AnalyzerThread(threading.Thread):
             self._mdp.total_transitions,
         )
 
-        # 1. Print MDP summary
-        print(f"\n{'─' * 50}")
-        print(self._mdp.summary())
-        print(f"{'─' * 50}")
+        # 1. Log MDP summary
+        logger.info("MDP summary:\n%s", self._mdp.summary())
 
         # 2. Convert MDP → PRISM
         prism_model = self._converter.convert(

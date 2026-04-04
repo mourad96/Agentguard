@@ -21,7 +21,9 @@ from __future__ import annotations
 import asyncio
 import io
 import logging
+import logging.handlers
 import os
+import queue
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Runtime_verification"))
@@ -50,11 +52,19 @@ from guarded_toolkit import GuardedHederaToolkit
 
 load_dotenv()
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s  %(name)-24s  %(levelname)-7s  %(message)s",
+_log_queue: queue.SimpleQueue = queue.SimpleQueue()
+_log_handler = logging.StreamHandler()
+_log_handler.setFormatter(logging.Formatter(
+    "%(asctime)s  %(name)-24s  %(levelname)-7s  %(message)s",
     datefmt="%H:%M:%S",
+))
+_log_listener = logging.handlers.QueueListener(
+    _log_queue, _log_handler, respect_handler_level=True
 )
+logging.getLogger().addHandler(logging.handlers.QueueHandler(_log_queue))
+logging.getLogger().setLevel(logging.INFO)
+_log_listener.start()
+
 log = logging.getLogger("hedera_defi_agent")
 
 
@@ -191,4 +201,7 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    finally:
+        _log_listener.stop()

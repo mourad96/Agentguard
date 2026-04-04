@@ -119,16 +119,13 @@ class Actuator:
         DIM = "\033[2m"
 
         width = 78
-        print(f"\n{BOLD}{'=' * width}{RESET}")
-        print(f"{BOLD}  AgentGuard -- Assurance Dashboard{RESET}")
-        print(f"{BOLD}{'=' * width}{RESET}")
-
-        # Header row
-        print(
-            f"  {'Property':<28} {'Value':>10} {'Threshold':>12} "
-            f"{'Dir':>6} {'Status':>8}"
-        )
-        print(f"  {'─' * 70}")
+        lines: List[str] = [
+            f"\n{BOLD}{'=' * width}{RESET}",
+            f"{BOLD}  AgentGuard -- Assurance Dashboard{RESET}",
+            f"{BOLD}{'=' * width}{RESET}",
+            f"  {'Property':<28} {'Value':>10} {'Threshold':>12} {'Dir':>6} {'Status':>8}",
+            f"  {'─' * 70}",
+        ]
 
         for tr in evaluated:
             icon = ICONS[tr.severity]
@@ -137,13 +134,14 @@ class Actuator:
                 f"{tr.threshold}" if tr.threshold is not None else "  N/A"
             )
             dir_str = tr.direction if tr.threshold is not None else "  N/A"
-            print(
+            lines.append(
                 f"  {tr.check.property_name:<28} "
                 f"{color}{tr.check.value:>10.4f}{RESET} "
                 f"{thresh_str:>12} {dir_str:>6}  {icon}"
             )
 
-        print(f"{DIM}{'─' * width}{RESET}\n")
+        lines.append(f"{DIM}{'─' * width}{RESET}")
+        logger.info("\n".join(lines))
 
     def _fire_callbacks(self, evaluated: List[ThresholdResult]) -> None:
         for tr in evaluated:
