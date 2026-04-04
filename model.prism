@@ -4,9 +4,10 @@ module agent
     s : [0..4] init 4;
 
     [fetch_data] s=0 -> 1.0000:(s'=4);
+    [adjust_params] s=1 -> 1.0000:(s'=3);
     [fetch_data] s=1 -> 1.0000:(s'=3);
     [finalize] s=2 -> 1.0000:(s'=4);
-    [submit_tx] s=3 -> 0.1667:(s'=0) + 0.3333:(s'=1) + 0.5000:(s'=2);
+    [submit_tx] s=3 -> 0.0625:(s'=0) + 0.8125:(s'=1) + 0.1250:(s'=2);
     [fetch_data] s=4 -> 1.0000:(s'=3);
 endmodule
 
@@ -15,12 +16,14 @@ label "On_Chain_Revert" = s=1;
 label "Opportunity_Spotted" = s=4;
 label "TX_Confirmed" = s=2;
 label "TX_Construction" = s=3;
+label "adjust_params" = s=1;
 label "fetch_data" = s=0 | s=1 | s=4;
 label "finalize" = s=2;
 label "submit_tx" = s=3;
 
 rewards "cycles"
     [fetch_data] s=0 : 1.00;
+    [adjust_params] s=1 : 1.00;
     [fetch_data] s=1 : 1.00;
     [finalize] s=2 : 1.00;
     [submit_tx] s=3 : 1.00;
