@@ -12,15 +12,12 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
-import type { TransitionRecord } from "../data/mockAgentData";
+import type { TransitionRecord } from "./data/mockAgentData";
 
 type Props = {
   transitions: TransitionRecord[];
 };
 
-/**
- * 根据 (from, action, to) 列表自动生成节点位置（按 BFS 分层），并画出有向边。
- */
 function buildFlowFromTransitions(transitions: TransitionRecord[]): {
   nodes: Node[];
   edges: Edge[];
@@ -66,8 +63,22 @@ function buildFlowFromTransitions(transitions: TransitionRecord[]): {
     ids.sort().forEach((id, i) => {
       nodes.push({
         id,
-        position: { x: L * 240, y: i * 110 },
-        data: { label: id },
+        position: { x: L * 280, y: i * 120 },
+        data: { label: id.charAt(0).toUpperCase() + id.slice(1) },
+        style: {
+          background: "rgba(20, 25, 35, 0.85)",
+          color: "#fff",
+          border: "1px solid rgba(255, 255, 255, 0.1)",
+          backdropFilter: "blur(12px)",
+          borderRadius: "12px",
+          padding: "16px",
+          width: 160,
+          textAlign: "center",
+          fontSize: "14px",
+          fontWeight: 600,
+          boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.3)",
+          transition: "transform 0.2s ease",
+        },
       });
     });
   });
@@ -76,20 +87,20 @@ function buildFlowFromTransitions(transitions: TransitionRecord[]): {
     id: `${t.from}-${t.action}-${t.to}-${idx}`,
     source: t.from,
     target: t.to,
-    label: t.action,
+    label: t.action.toUpperCase(),
     animated: true,
-    markerEnd: { type: MarkerType.ArrowClosed, color: "#8b9bb4" },
-    style: { stroke: "#6b7a90" },
-    labelStyle: { fill: "#c5ced9", fontSize: 11 },
-    labelBgStyle: { fill: "#1a1f28" },
-    labelBgPadding: [4, 2] as [number, number],
-    labelBgBorderRadius: 4,
+    markerEnd: { type: MarkerType.ArrowClosed, color: "#6366f1" },
+    style: { stroke: "#6366f1", strokeWidth: 2 },
+    labelStyle: { fill: "#a5b4fc", fontSize: 11, fontWeight: "bold" },
+    labelBgStyle: { fill: "#1e1b4b" },
+    labelBgPadding: [6, 4] as [number, number],
+    labelBgBorderRadius: 6,
   }));
 
   return { nodes, edges };
 }
 
-export function TransitionGraph({ transitions }: Props) {
+export function StateTransitionGraph({ transitions }: Props) {
   const built = useMemo(
     () => buildFlowFromTransitions(transitions),
     [transitions],
@@ -114,12 +125,13 @@ export function TransitionGraph({ transitions }: Props) {
         proOptions={{ hideAttribution: true }}
         defaultEdgeOptions={{ type: "smoothstep" }}
       >
-        <Background color="#2a3140" gap={16} />
+        <Background color="rgba(255, 255, 255, 0.05)" gap={16} />
         <Controls />
         <MiniMap
           nodeStrokeWidth={2}
           maskColor="rgba(15, 17, 21, 0.85)"
           className="transition-graph__minimap"
+          style={{ backgroundColor: "#1e1b4b" }}
         />
       </ReactFlow>
     </div>
