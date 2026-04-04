@@ -16,6 +16,7 @@ import type { TransitionRecord } from "./data/mockAgentData";
 
 type Props = {
   transitions: TransitionRecord[];
+  activeNode?: string | null;
 };
 
 function buildFlowFromTransitions(transitions: TransitionRecord[]): {
@@ -100,7 +101,7 @@ function buildFlowFromTransitions(transitions: TransitionRecord[]): {
   return { nodes, edges };
 }
 
-export function StateTransitionGraph({ transitions }: Props) {
+export function StateTransitionGraph({ transitions, activeNode }: Props) {
   const built = useMemo(
     () => buildFlowFromTransitions(transitions),
     [transitions],
@@ -112,6 +113,23 @@ export function StateTransitionGraph({ transitions }: Props) {
     setNodes(built.nodes);
     setEdges(built.edges);
   }, [built, setNodes, setEdges]);
+
+  useEffect(() => {
+    if (activeNode === undefined) return;
+    setNodes((nds) =>
+      nds.map((n) => {
+        const isActive = n.id === activeNode;
+        return {
+          ...n,
+          style: {
+            ...n.style,
+            boxShadow: isActive ? "0 0 20px 4px rgba(236, 72, 153, 0.6)" : "0 8px 32px 0 rgba(0, 0, 0, 0.3)",
+            border: isActive ? "2px solid #ec4899" : "1px solid rgba(255, 255, 255, 0.1)",
+          },
+        };
+      })
+    );
+  }, [activeNode, setNodes]);
 
   return (
     <div className="transition-graph">

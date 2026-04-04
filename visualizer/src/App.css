@@ -56,11 +56,19 @@
   z-index: 10;
 }
 
+.left-pane, .right-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-height: 0;
+}
+
 @media (max-width: 1024px) {
   .app__main {
     grid-template-columns: 1fr;
   }
 }
+
 
 .panel {
   display: flex;
@@ -110,7 +118,13 @@
 }
 
 .panel--graph {
-  min-height: 580px;
+  min-height: 400px;
+  flex: 1;
+}
+
+/* Base styles for properties panel */
+.panel--properties {
+  min-height: 250px;
 }
 
 .transition-graph {
@@ -167,4 +181,117 @@
 .chart-card__plot {
   flex: 1;
   min-height: 200px;
+}
+
+/* Dashboard Additions */
+
+.table-container {
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.props-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  color: #e8eaef;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.props-table th {
+  text-align: left;
+  padding: 0.75rem;
+  color: #94a3b8;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  background: rgba(0,0,0,0.2);
+  font-weight: 600;
+}
+
+.props-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.prop-name {
+  font-family: monospace;
+  color: #a5b4fc;
+  font-weight: bold;
+}
+
+.row-violated {
+  background: rgba(239, 68, 68, 0.15);
+  transition: background 0.3s ease;
+}
+
+.status-ok {
+  color: #10b981;
+  font-weight: 700;
+}
+
+.status-viol {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.override-input {
+  width: 80px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.override-input:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.header__controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1.25rem;
+  margin-top: -2rem;
+}
+
+.btn-simulate {
+  background: #4f46e5;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.4rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+.btn-simulate:hover {
+  background: #6366f1;
+  transform: translateY(-1px);
+}
+
+.btn-simulate.active {
+  background: #ec4899;
+  box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
+}
+
+.btn-simulate.active:hover {
+  background: #f472b6;
+}
+
+.step-counter {
+  font-size: 0.95rem;
+  color: #cbd5e1;
+  font-family: monospace;
+  background: rgba(255,255,255,0.05);
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.1);
 }
