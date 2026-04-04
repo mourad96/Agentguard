@@ -1,0 +1,171 @@
+12:17:46  agentguard.checker        INFO     Using mock model checker
+12:17:46  agentguard.analyzer       INFO     AnalyzerThread started (interval=5)
+12:17:46  agentguard.logger         INFO     AgentGuardLogger initialised -- analyzer thread running
+12:17:48  agentguard.analyzer       INFO     Running verification (total transitions: 5)
+12:17:48  agentguard.prism          INFO     PRISM model written to C:\Users\User\Documents\dev\agentguard_blockchain\Agentguard\Runtime_verification\latest_model.prism
+12:17:51  agentguard.analyzer       INFO     Running verification (total transitions: 10)
+12:17:51  agentguard.prism          INFO     PRISM model written to C:\Users\User\Documents\dev\agentguard_blockchain\Agentguard\Runtime_verification\latest_model.prism
+12:17:53  agentguard.analyzer       INFO     Running verification (total transitions: 15)
+12:17:53  agentguard.prism          INFO     PRISM model written to C:\Users\User\Documents\dev\agentguard_blockchain\Agentguard\Runtime_verification\latest_model.prism
+12:17:55  agentguard.logger         INFO     Shutdown requested -- draining queue ...
+12:17:55  agentguard.analyzer       INFO     Running verification (total transitions: 17)
+12:17:55  agentguard.prism          INFO     PRISM model written to C:\Users\User\Documents\dev\agentguard_blockchain\Agentguard\Runtime_verification\latest_model.prism
+12:17:55  agentguard.logger         INFO     AnalyzerThread stopped cleanly
+============================================================
+  Liquidation Bot Demo -- Stuck in Loop Scenario
+============================================================
+
+  [ 1]  Opportunity_Spotted   --fetch_data     -->  TX_Construction
+  [ 2]  TX_Construction       --submit_tx      -->  On_Chain_Revert
+  [ 3]  On_Chain_Revert       --adjust_params  -->  TX_Construction
+  [ 4]  TX_Construction       --submit_tx      -->  Network_Error
+  [ 5]  Network_Error         --fetch_data     -->  Opportunity_Spotted
+
+──────────────────────────────────────────────────
+MDP Summary  (5 states, 3 actions, 5 transitions observed)
+  Initial state : Opportunity_Spotted
+  States        : Network_Error, On_Chain_Revert, Opportunity_Spotted, TX_Confirmed, TX_Construction
+  Actions       : adjust_params, fetch_data, submit_tx
+  (Network_Error, fetch_data) → [Opportunity_Spotted: 1.00]
+  (On_Chain_Revert, adjust_params) → [TX_Construction: 1.00]
+  (Opportunity_Spotted, fetch_data) → [TX_Construction: 1.00]
+  (TX_Construction, submit_tx) → [Network_Error: 0.50, On_Chain_Revert: 0.50]
+──────────────────────────────────────────────────
+
+[1m==============================================================================[0m
+[1m  AgentGuard -- Assurance Dashboard[0m
+[1m==============================================================================[0m
+  Property                          Value    Threshold    Dir   Status
+  ──────────────────────────────────────────────────────────────────────
+  min_expected_cycles          [93m   11.3415[0m         10.0  below  [!]
+  max_prob_success             [92m    0.4033[0m          0.2  above  [OK]
+  prob_stuck_in_revert         [92m    0.0536[0m          N/A    N/A  [OK]
+[2m──────────────────────────────────────────────────────────────────────────────[0m
+
+
+  [!] ALERT: 'min_expected_cycles' = 11.3415 (threshold: 10.0, dir: below)
+
+  [ 6]  Opportunity_Spotted   --fetch_data     -->  TX_Construction
+  [ 7]  TX_Construction       --submit_tx      -->  On_Chain_Revert
+  [ 8]  On_Chain_Revert       --adjust_params  -->  TX_Construction
+  [ 9]  TX_Construction       --submit_tx      -->  On_Chain_Revert
+  [10]  On_Chain_Revert       --adjust_params  -->  TX_Construction
+
+──────────────────────────────────────────────────
+MDP Summary  (5 states, 3 actions, 10 transitions observed)
+  Initial state : Opportunity_Spotted
+  States        : Network_Error, On_Chain_Revert, Opportunity_Spotted, TX_Confirmed, TX_Construction
+  Actions       : adjust_params, fetch_data, submit_tx
+  (Network_Error, fetch_data) → [Opportunity_Spotted: 1.00]
+  (On_Chain_Revert, adjust_params) → [TX_Construction: 1.00]
+  (Opportunity_Spotted, fetch_data) → [TX_Construction: 1.00]
+  (TX_Construction, submit_tx) → [Network_Error: 0.25, On_Chain_Revert: 0.75]
+──────────────────────────────────────────────────
+
+[1m==============================================================================[0m
+[1m  AgentGuard -- Assurance Dashboard[0m
+[1m==============================================================================[0m
+  Property                          Value    Threshold    Dir   Status
+  ──────────────────────────────────────────────────────────────────────
+  min_expected_cycles          [93m   13.1294[0m         10.0  below  [!]
+  max_prob_success             [92m    0.3444[0m          0.2  above  [OK]
+  prob_stuck_in_revert         [92m    0.0000[0m          N/A    N/A  [OK]
+[2m──────────────────────────────────────────────────────────────────────────────[0m
+
+
+  [!] ALERT: 'min_expected_cycles' = 13.1294 (threshold: 10.0, dir: below)
+
+  [11]  TX_Construction       --submit_tx      -->  On_Chain_Revert
+  [12]  On_Chain_Revert       --adjust_params  -->  TX_Construction
+  [13]  TX_Construction       --submit_tx      -->  On_Chain_Revert
+  [14]  On_Chain_Revert       --adjust_params  -->  TX_Construction
+  [15]  TX_Construction       --submit_tx      -->  On_Chain_Revert
+
+──────────────────────────────────────────────────
+MDP Summary  (5 states, 3 actions, 15 transitions observed)
+  Initial state : Opportunity_Spotted
+  States        : Network_Error, On_Chain_Revert, Opportunity_Spotted, TX_Confirmed, TX_Construction
+  Actions       : adjust_params, fetch_data, submit_tx
+  (Network_Error, fetch_data) → [Opportunity_Spotted: 1.00]
+  (On_Chain_Revert, adjust_params) → [TX_Construction: 1.00]
+  (Opportunity_Spotted, fetch_data) → [TX_Construction: 1.00]
+  (TX_Construction, submit_tx) → [Network_Error: 0.14, On_Chain_Revert: 0.86]
+──────────────────────────────────────────────────
+
+[1m==============================================================================[0m
+[1m  AgentGuard -- Assurance Dashboard[0m
+[1m==============================================================================[0m
+  Property                          Value    Threshold    Dir   Status
+  ──────────────────────────────────────────────────────────────────────
+  min_expected_cycles          [93m   13.0890[0m         10.0  below  [!]
+  max_prob_success             [92m    0.7520[0m          0.2  above  [OK]
+  prob_stuck_in_revert         [92m    0.0516[0m          N/A    N/A  [OK]
+[2m──────────────────────────────────────────────────────────────────────────────[0m
+
+
+  [!] ALERT: 'min_expected_cycles' = 13.0890 (threshold: 10.0, dir: below)
+
+  [16]  On_Chain_Revert       --adjust_params  -->  TX_Construction
+  [17]  TX_Construction       --submit_tx      -->  TX_Confirmed
+
+  [v] Liquidation completed after 17 steps.
+
+  Shutting down AgentGuard ...
+
+──────────────────────────────────────────────────
+MDP Summary  (5 states, 3 actions, 17 transitions observed)
+  Initial state : Opportunity_Spotted
+  States        : Network_Error, On_Chain_Revert, Opportunity_Spotted, TX_Confirmed, TX_Construction
+  Actions       : adjust_params, fetch_data, submit_tx
+  (Network_Error, fetch_data) → [Opportunity_Spotted: 1.00]
+  (On_Chain_Revert, adjust_params) → [TX_Construction: 1.00]
+  (Opportunity_Spotted, fetch_data) → [TX_Construction: 1.00]
+  (TX_Construction, submit_tx) → [Network_Error: 0.12, On_Chain_Revert: 0.75, TX_Confirmed: 0.12]
+──────────────────────────────────────────────────
+
+[1m==============================================================================[0m
+[1m  AgentGuard -- Assurance Dashboard[0m
+[1m==============================================================================[0m
+  Property                          Value    Threshold    Dir   Status
+  ──────────────────────────────────────────────────────────────────────
+  min_expected_cycles          [91m   15.1312[0m         10.0  below  [X]
+  max_prob_success             [92m    0.7379[0m          0.2  above  [OK]
+  prob_stuck_in_revert         [92m    0.0906[0m          N/A    N/A  [OK]
+[2m──────────────────────────────────────────────────────────────────────────────[0m
+
+
+  [X] INTERVENTION: 'min_expected_cycles' = 15.1312 critically breaches threshold 10.0!
+      -> HALTING LIQUIDATION BOT TO PREVENT GAS DRAIN.
+
+
+============================================================
+  [i] Generated PRISM model: C:\Users\User\Documents\dev\agentguard_blockchain\Agentguard\Runtime_verification\latest_model.prism
+============================================================
+mdp
+
+module agent
+    s : [0..4] init 4;
+
+    [fetch_data] s=0 -> 1.0000:(s'=4);
+    [adjust_params] s=1 -> 1.0000:(s'=3);
+    [submit_tx] s=3 -> 0.1250:(s'=0) + 0.7500:(s'=1) + 0.1250:(s'=2);
+    [fetch_data] s=4 -> 1.0000:(s'=3);
+    [wait] s=2 -> 1.0:(s'=2);
+endmodule
+
+label "Network_Error" = s=0;
+label "On_Chain_Revert" = s=1;
+label "Opportunity_Spotted" = s=4;
+label "TX_Confirmed" = s=2;
+label "TX_Construction" = s=3;
+label "adjust_params" = s=1;
+label "fetch_data" = s=0 | s=4;
+label "submit_tx" = s=3;
+
+rewards "cycles"
+    [fetch_data] s=0 : 1.00;
+    [adjust_params] s=1 : 1.00;
+    [submit_tx] s=3 : 1.00;
+    [fetch_data] s=4 : 1.00;
+    [wait] s=2 : 1.0;
+endrewards

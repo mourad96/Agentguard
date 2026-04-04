@@ -1,34 +1,28 @@
 mdp
 
 module agent
-    s : [0..5] init 5;
+    s : [0..4] init 4;
 
-    [run_tests] s=0 -> 0.5000:(s'=1) + 0.5000:(s'=2);
-    [write_fix] s=0 -> 1.0000:(s'=3);
-    [read_file] s=1 -> 1.0000:(s'=5);
-    [read_file] s=2 -> 1.0000:(s'=0);
-    [finalize] s=3 -> 1.0000:(s'=5);
-    [read_file] s=5 -> 1.0000:(s'=0);
-    [wait] s=4 -> 1.0:(s'=4);
+    [fetch_data] s=0 -> 1.0000:(s'=4);
+    [adjust_params] s=1 -> 1.0000:(s'=3);
+    [submit_tx] s=3 -> 0.1250:(s'=0) + 0.7500:(s'=1) + 0.1250:(s'=2);
+    [fetch_data] s=4 -> 1.0000:(s'=3);
+    [wait] s=2 -> 1.0:(s'=2);
 endmodule
 
-label "Analyzing" = s=0;
-label "Error" = s=1;
-label "Fix_Failed" = s=2;
-label "Fix_Success" = s=3;
-label "Fixing" = s=4;
-label "Init" = s=5;
-label "finalize" = s=3;
-label "read_file" = s=1 | s=2 | s=5;
-label "run_tests" = s=0;
-label "write_fix" = s=0;
+label "Network_Error" = s=0;
+label "On_Chain_Revert" = s=1;
+label "Opportunity_Spotted" = s=4;
+label "TX_Confirmed" = s=2;
+label "TX_Construction" = s=3;
+label "adjust_params" = s=1;
+label "fetch_data" = s=0 | s=4;
+label "submit_tx" = s=3;
 
 rewards "cycles"
-    [run_tests] s=0 : 1.00;
-    [write_fix] s=0 : 1.00;
-    [read_file] s=1 : 1.00;
-    [read_file] s=2 : 1.00;
-    [finalize] s=3 : 1.00;
-    [read_file] s=5 : 1.00;
-    [wait] s=4 : 1.0;
+    [fetch_data] s=0 : 1.00;
+    [adjust_params] s=1 : 1.00;
+    [submit_tx] s=3 : 1.00;
+    [fetch_data] s=4 : 1.00;
+    [wait] s=2 : 1.0;
 endrewards

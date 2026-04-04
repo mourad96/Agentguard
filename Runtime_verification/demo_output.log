@@ -1,0 +1,69 @@
+12:16:30  agentguard.checker        INFO     Using mock model checker
+12:16:30  agentguard.analyzer       INFO     AnalyzerThread started (interval=5)
+12:16:30  agentguard.logger         INFO     AgentGuardLogger initialised -- analyzer thread running
+12:16:31  agentguard.logger         INFO     Shutdown requested -- draining queue ...
+12:16:31  agentguard.analyzer       INFO     Running verification (total transitions: 2)
+12:16:31  agentguard.prism          INFO     PRISM model written to C:\Users\User\Documents\dev\agentguard_blockchain\Agentguard\Runtime_verification\latest_model.prism
+12:16:31  agentguard.analyzer       INFO     AnalyzerThread stopped
+12:16:31  agentguard.logger         INFO     AnalyzerThread stopped cleanly
+============================================================
+  Liquidation Bot Demo -- Stuck in Loop Scenario
+============================================================
+
+  [ 1]  Opportunity_Spotted   --fetch_data     -->  TX_Construction
+  [ 2]  TX_Construction       --submit_tx      -->  TX_Confirmed
+
+  [v] Liquidation completed after 2 steps.
+
+  Shutting down AgentGuard ...
+
+──────────────────────────────────────────────────
+MDP Summary  (5 states, 2 actions, 2 transitions observed)
+  Initial state : Opportunity_Spotted
+  States        : Network_Error, On_Chain_Revert, Opportunity_Spotted, TX_Confirmed, TX_Construction
+  Actions       : fetch_data, submit_tx
+  (Opportunity_Spotted, fetch_data) → [TX_Construction: 1.00]
+  (TX_Construction, submit_tx) → [TX_Confirmed: 1.00]
+──────────────────────────────────────────────────
+
+[1m==============================================================================[0m
+[1m  AgentGuard -- Assurance Dashboard[0m
+[1m==============================================================================[0m
+  Property                          Value    Threshold    Dir   Status
+  ──────────────────────────────────────────────────────────────────────
+  min_expected_cycles          [92m    9.4327[0m         10.0  below  [OK]
+  max_prob_success             [92m    0.4046[0m          0.2  above  [OK]
+  prob_stuck_in_revert         [92m    0.0860[0m          N/A    N/A  [OK]
+[2m──────────────────────────────────────────────────────────────────────────────[0m
+
+
+============================================================
+  [i] Generated PRISM model: C:\Users\User\Documents\dev\agentguard_blockchain\Agentguard\Runtime_verification\latest_model.prism
+============================================================
+mdp
+
+module agent
+    s : [0..4] init 4;
+
+    [submit_tx] s=3 -> 1.0000:(s'=2);
+    [fetch_data] s=4 -> 1.0000:(s'=3);
+    [wait] s=0 -> 1.0:(s'=0);
+    [wait] s=1 -> 1.0:(s'=1);
+    [wait] s=2 -> 1.0:(s'=2);
+endmodule
+
+label "Network_Error" = s=0;
+label "On_Chain_Revert" = s=1;
+label "Opportunity_Spotted" = s=4;
+label "TX_Confirmed" = s=2;
+label "TX_Construction" = s=3;
+label "fetch_data" = s=4;
+label "submit_tx" = s=3;
+
+rewards "cycles"
+    [submit_tx] s=3 : 1.00;
+    [fetch_data] s=4 : 1.00;
+    [wait] s=0 : 1.0;
+    [wait] s=1 : 1.0;
+    [wait] s=2 : 1.0;
+endrewards
