@@ -120,7 +120,7 @@ export function parsePrism(content: string): ParsedPrism {
     let x = 500, y = 0;
     if (s === 4) { x = 600; y = 100; }
     else if (s === 3) { x = 600; y = 380; }
-    else if (s === 2) { x = 50;  y = 680; }
+    else if (s === 2) { x = 50; y = 680; }
     else if (s === 1) { x = 600; y = 680; }
     else if (s === 0) { x = 1150; y = 680; }
     else { x = s * 250; y = 800; }
