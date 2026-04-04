@@ -4,17 +4,14 @@ agent:
 
 seed_from_previous: false
 seed_weight: 5
+prism_output: "../Runtime_verification/latest_model.prism"
 
 states:
-  - "Idle"
-  - "Planning"
-  - "Querying_Balance"
-  - "Transferring_HBAR"
-  - "Creating_Token"
-  - "Minting_Token"
-  - "Transferring_Token"
+  - "Opportunity_Spotted"
+  - "TX_Construction"
   - "TX_Confirmed"
-  - "TX_Failed"
+  - "On_Chain_Revert"
+  - "Network_Error"
 
 properties:
   min_expected_cycles: "Rmin=?[ F \"TX_Confirmed\" ]"
@@ -22,17 +19,10 @@ properties:
   prob_missing_critical_action: "Pmax=? [ G !\"TX_Confirmed\" ]"
 
 actions:
-  - "agent_think"
-  - "get_account_balance"
-  - "transfer_hbar"
-  - "create_token"
-  - "mint_token"
-  - "transfer_token"
-  - "tx_success"
-  - "tx_error"
-  - "query_complete"
-  - "reset"
-  - "retry"
+  - "fetch_data"
+  - "submit_tx"
+  - "finalize"
+  - "adjust_params"
 
 safety_thresholds:
   min_prob_success: 0.70

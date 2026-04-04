@@ -8,11 +8,11 @@ encounters failures, retries -- creating a potential revert loop that
 AgentGuard detects and halts.
 
 The agent:
-  1. Queries the operator balance            (Monitoring)
-  2. Decides whether to "liquidate"          (Opportunity_Spotted)
-  3. Constructs and executes a token op      (TX_Construction -> Executing)
-  4. On success: finalises, loops back       (TX_Confirmed -> Monitoring)
-  5. On failure: retries with new params     (On_Chain_Revert -> TX_Construction)
+  1. Spots an opportunity / queries balance  (Opportunity_Spotted)
+  2. Fetches data and constructs a TX        (TX_Construction)
+  3. Submits the TX on-chain
+     - On success: finalises, loops back     (TX_Confirmed -> Opportunity_Spotted)
+     - On failure: adjusts params, retries   (On_Chain_Revert -> TX_Construction)
 
 AgentGuard watches the MDP and intervenes when the expected cycle count
 exceeds the threshold -- proof that the bot would burn gas in a loop.
@@ -140,7 +140,7 @@ async def main() -> None:
 
     # ── Hedera client ────────────────────────────────────────────────
     account_id = AccountId.from_string(account_id_str)
-    private_key = PrivateKey.from_string(private_key_str)
+    private_key = PrivateKey.from_string_ecdsa(private_key_str.removeprefix("0x"))
     client = Client(Network(network="testnet"))
     client.set_operator(account_id, private_key)
 
@@ -170,8 +170,6 @@ async def main() -> None:
 
     guarded = GuardedHederaToolkit(
         hedera_toolkit, guard, halt_flag=_HALT_EVENT,
-        default_state="Monitoring",
-        planning_state="Opportunity_Spotted",
     )
     tools = guarded.get_tools()
 
@@ -208,11 +206,8 @@ async def main() -> None:
         print(f"  Round {i}/{len(ROUND_PROMPTS)}: {prompt[:70]}{'...' if len(prompt) > 70 else ''}")
         print(f"{'─' * 64}")
 
-        # Log the monitoring -> opportunity transition for the loop itself
         guard.log_transition(
-            guarded.state if guarded.state != "Monitoring" else "Monitoring",
-            "scan_positions",
-            "Opportunity_Spotted",
+            guarded.state, "fetch_data", "TX_Construction",
         )
 
         try:
@@ -225,11 +220,11 @@ async def main() -> None:
         except Exception as exc:
             log.error("Round %d failed: %s", i, exc)
             print(f"\n  [ERROR] {exc}")
-            guard.log_transition(guarded.state, "tx_error", "Network_Error")
-            guard.log_transition("Network_Error", "recover", "Monitoring")
+            guard.log_transition(guarded.state, "submit_tx", "On_Chain_Revert")
+            guard.log_transition("On_Chain_Revert", "adjust_params", "TX_Construction")
 
         if not _HALT_EVENT.is_set():
-            guard.log_transition(guarded.state, "finalize", "Monitoring")
+            guard.log_transition(guarded.state, "finalize", "Opportunity_Spotted")
 
     else:
         if not _HALT_EVENT.is_set():
@@ -240,13 +235,9 @@ async def main() -> None:
     print("  Shutting down AgentGuard ...")
     guard.shutdown(timeout=10.0)
 
-    prism_path = os.path.join(
-        os.path.dirname(__file__),
-        "..", "Runtime_verification",
-        guard.config.verification.prism_output,
-    )
+    prism_path = guard.config.verification.prism_output
     if os.path.exists(prism_path):
-        print(f"\n  [i] Updated PRISM model: {prism_path}")
+        print(f"\n  [i] Updated PRISM model: {os.path.abspath(prism_path)}")
 
     if _HALT_EVENT.is_set():
         print("\n  [X] Bot was HALTED by AgentGuard safety intervention.")

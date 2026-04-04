@@ -4,12 +4,11 @@ agent:
 
 seed_from_previous: false
 seed_weight: 5
+prism_output: "../Runtime_verification/latest_model.prism"
 
 states:
-  - "Monitoring"
   - "Opportunity_Spotted"
   - "TX_Construction"
-  - "Executing_Liquidation"
   - "TX_Confirmed"
   - "On_Chain_Revert"
   - "Network_Error"
@@ -20,15 +19,10 @@ properties:
   prob_missing_critical_action: "Pmax=? [ G !\"TX_Confirmed\" ]"
 
 actions:
-  - "scan_positions"
-  - "evaluate_opportunity"
-  - "build_tx"
-  - "execute_liquidation"
+  - "fetch_data"
+  - "submit_tx"
   - "finalize"
-  - "tx_success"
-  - "tx_error"
-  - "retry"
-  - "recover"
+  - "adjust_params"
 
 safety_thresholds:
   min_prob_success: 0.80

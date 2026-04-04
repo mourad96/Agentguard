@@ -5,13 +5,18 @@ Wraps every LangChain tool produced by HederaLangchainToolkit so that
 each invocation automatically logs state transitions into AgentGuard's
 runtime-verification pipeline.
 
-State machine per tool call:
+Uses the same 5-state / 4-action MDP as the demo:
 
-    current_state  --<tool_name>-->  Executing_<Category>
-    Executing_<Category>  --tx_success-->  TX_Confirmed   (on success)
-    Executing_<Category>  --tx_error-->    TX_Failed       (on exception)
-    TX_Confirmed  --reset-->  Idle
-    TX_Failed     --retry-->  Planning
+    States : Opportunity_Spotted, TX_Construction, TX_Confirmed,
+             On_Chain_Revert, Network_Error
+    Actions: fetch_data, submit_tx, finalize, adjust_params
+
+Transition map:
+    Query tool  : Opportunity_Spotted --fetch_data--> TX_Construction
+    Write (ok)  : TX_Construction --submit_tx--> TX_Confirmed
+                  TX_Confirmed   --finalize-->   Opportunity_Spotted
+    Write (fail): TX_Construction --submit_tx--> On_Chain_Revert
+                  On_Chain_Revert --adjust_params--> TX_Construction
 
 Usage:
     guarded = GuardedHederaToolkit(hedera_toolkit, guard_logger)
@@ -23,28 +28,15 @@ from __future__ import annotations
 import logging
 import threading
 from functools import wraps
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 from langchain_core.tools import BaseTool
 
 logger = logging.getLogger("agentguard.guarded_toolkit")
 
-TOOL_STATE_MAP: Dict[str, str] = {
-    "transfer_hbar":            "Transferring_HBAR",
-    "create_fungible_token":    "Creating_Token",
-    "create_nft":               "Creating_Token",
-    "mint_token":               "Minting_Token",
-    "mint_nft":                 "Minting_Token",
-    "transfer_token":           "Transferring_Token",
-    "associate_token":          "Transferring_Token",
-    "dissociate_token":         "Transferring_Token",
-    "airdrop_token":            "Transferring_Token",
-    "get_account_balance":      "Querying_Balance",
-    "get_account_info":         "Querying_Balance",
-    "get_account_token_balance":"Querying_Balance",
-}
-
-QUERY_STATES = {"Querying_Balance"}
+def _is_query_tool(name: str) -> bool:
+    """Return True for read-only tools (balance queries, account info, etc.)."""
+    return "query" in name.lower()
 
 
 class GuardedHederaToolkit:
@@ -55,15 +47,13 @@ class GuardedHederaToolkit:
         hedera_toolkit: Any,
         guard: Any,
         halt_flag: Optional[threading.Event] = None,
-        default_state: str = "Idle",
-        planning_state: str = "Planning",
+        default_state: str = "Opportunity_Spotted",
     ) -> None:
         self._toolkit = hedera_toolkit
         self._guard = guard
         self._halt = halt_flag or threading.Event()
         self._state = default_state
         self._default = default_state
-        self._planning = planning_state
         self._lock = threading.Lock()
 
     @property
@@ -94,56 +84,51 @@ class GuardedHederaToolkit:
         original_run = tool._run
         original_arun = getattr(tool, "_arun", None)
         tool_name = tool.name
+        is_query = _is_query_tool(tool_name)
 
-        def _pre(tk: "GuardedHederaToolkit") -> str:
-            mapped = TOOL_STATE_MAP.get(tool_name, f"Executing_{tool_name}")
-            prev = tk.state
-            if prev in (tk._default, "TX_Confirmed"):
-                tk.log(prev, "agent_think", tk._planning)
-                prev = tk._planning
-            tk.log(prev, tool_name, mapped)
-            return mapped
+        def _pre(tk: "GuardedHederaToolkit") -> None:
+            if is_query:
+                tk.log("Opportunity_Spotted", "fetch_data", "TX_Construction")
+            # Write tools: no pre-transition needed; they start from
+            # TX_Construction (which queries already moved us to).
 
-        def _post_ok(tk: "GuardedHederaToolkit", mapped: str) -> None:
-            if mapped in QUERY_STATES:
-                tk.log(mapped, "query_complete", tk._planning)
-            else:
-                tk.log(mapped, "tx_success", "TX_Confirmed")
-                tk.log("TX_Confirmed", "reset", tk._default)
+        def _post_ok(tk: "GuardedHederaToolkit") -> None:
+            if is_query:
+                return
+            tk.log("TX_Construction", "submit_tx", "TX_Confirmed")
+            tk.log("TX_Confirmed", "finalize", "Opportunity_Spotted")
 
-        def _post_err(tk: "GuardedHederaToolkit", mapped: str) -> None:
-            tk.log(mapped, "tx_error", "TX_Failed")
-            tk.log("TX_Failed", "retry", tk._planning)
+        def _post_err(tk: "GuardedHederaToolkit") -> None:
+            tk.log("TX_Construction", "submit_tx", "On_Chain_Revert")
+            tk.log("On_Chain_Revert", "adjust_params", "TX_Construction")
 
         @wraps(original_run)
         def guarded_run(*args: Any, **kwargs: Any) -> Any:
             if toolkit.halted:
                 return "[HALTED] AgentGuard has stopped this agent."
-            mapped = _pre(toolkit)
+            _pre(toolkit)
             try:
                 result = original_run(*args, **kwargs)
             except Exception:
-                _post_err(toolkit, mapped)
+                _post_err(toolkit)
                 raise
-            _post_ok(toolkit, mapped)
+            _post_ok(toolkit)
             return result
 
         tool._run = guarded_run
 
         if original_arun is not None:
-            import asyncio
-
             @wraps(original_arun)
             async def guarded_arun(*args: Any, **kwargs: Any) -> Any:
                 if toolkit.halted:
                     return "[HALTED] AgentGuard has stopped this agent."
-                mapped = _pre(toolkit)
+                _pre(toolkit)
                 try:
                     result = await original_arun(*args, **kwargs)
                 except Exception:
-                    _post_err(toolkit, mapped)
+                    _post_err(toolkit)
                     raise
-                _post_ok(toolkit, mapped)
+                _post_ok(toolkit)
                 return result
 
             tool._arun = guarded_arun

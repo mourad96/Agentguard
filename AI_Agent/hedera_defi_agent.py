@@ -113,7 +113,7 @@ async def main() -> None:
 
     # ── Hedera client ────────────────────────────────────────────────
     account_id = AccountId.from_string(account_id_str)
-    private_key = PrivateKey.from_string(private_key_str)
+    private_key = PrivateKey.from_string_ecdsa(private_key_str.removeprefix("0x"))
     client = Client(Network(network="testnet"))
     client.set_operator(account_id, private_key)
 
@@ -189,13 +189,9 @@ async def main() -> None:
     print("  Shutting down AgentGuard ...")
     guard.shutdown(timeout=10.0)
 
-    prism_path = os.path.join(
-        os.path.dirname(__file__),
-        "..", "Runtime_verification",
-        guard.config.verification.prism_output,
-    )
+    prism_path = guard.config.verification.prism_output
     if os.path.exists(prism_path):
-        print(f"\n  [i] Updated PRISM model: {prism_path}")
+        print(f"\n  [i] Updated PRISM model: {os.path.abspath(prism_path)}")
 
     print("\n  [v] DeFi Agent demo complete.\n")
 
