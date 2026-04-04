@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
-import { ReactFlowProvider } from "@xyflow/react";
+import { useState, useEffect, useCallback } from "react";
+import { ReactFlowProvider, type Node, type Edge } from "@xyflow/react";
 
 import { MetricsPanel } from "./MetricsPanel";
 import { StateTransitionGraph } from "./StateTransitionGraph";
+import { parsePrism } from "./utils/prismParser";
 import { 
   mockTransitions, 
   initialMetrics, 
@@ -20,6 +21,24 @@ export default function App() {
   const [activeNode, setActiveNode] = useState("Opportunity_Spotted");
   const [stutterCount, setStutterCount] = useState(0);
   const [isHalted, setIsHalted] = useState(false);
+
+  const [graphData, setGraphData] = useState<{ nodes: Node[], edges: Edge[] }>({ nodes: [], edges: [] });
+
+  const refreshModel = useCallback(async () => {
+    try {
+      const res = await fetch("/model.prism");
+      if (!res.ok) throw new Error("Failed to fetch model.prism");
+      const content = await res.text();
+      const parsed = parsePrism(content);
+      setGraphData(parsed);
+    } catch (err) {
+      console.error("Error refreshing model:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshModel();
+  }, [refreshModel]);
 
   useEffect(() => {
     const hasViolation = properties.some(p => p.status === "[VIOLATED]") || isHalted;
@@ -136,10 +155,10 @@ export default function App() {
         </div>
         <div className="header__controls">
           <button 
-            className={`btn-simulate ${isSimulating ? "active" : ""}`}
-            onClick={() => setIsSimulating(!isSimulating)}
+            className="btn-simulate active"
+            onClick={refreshModel}
           >
-            {isSimulating ? "⏸ Pause Simulation" : "▶ Start Simulation"}
+            🔄 Refresh Diagram
           </button>
           <span className="step-counter">Step: {step}</span>
         </div>
@@ -199,6 +218,8 @@ export default function App() {
             </div>
             <ReactFlowProvider>
               <StateTransitionGraph 
+                nodes={graphData.nodes}
+                edges={graphData.edges}
                 activeNode={activeNode} 
               />
             </ReactFlowProvider>
