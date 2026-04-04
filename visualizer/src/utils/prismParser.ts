@@ -6,6 +6,40 @@ export interface ParsedPrism {
   edges: Edge[];
 }
 
+function makeEdge(
+  id: string,
+  source: string,
+  target: string,
+  labelText: string,
+  opts: {
+    sourceHandle?: string;
+    targetHandle?: string;
+    edgeType?: 'straight' | 'smoothstep';
+    labelPosition?: number;
+    labelOffsetX?: number;
+    labelOffsetY?: number;
+    animated?: boolean;
+  } = {}
+): Edge {
+  return {
+    id,
+    source,
+    target,
+    sourceHandle: opts.sourceHandle,
+    targetHandle: opts.targetHandle,
+    type: 'offsetEdge',
+    animated: opts.animated ?? true,
+    markerEnd: { type: MarkerType.ArrowClosed, color: "#6366f1" },
+    data: {
+      labelText,
+      edgeType: opts.edgeType ?? 'straight',
+      labelPosition: opts.labelPosition ?? 0.5,
+      labelOffsetX: opts.labelOffsetX ?? 0,
+      labelOffsetY: opts.labelOffsetY ?? 0,
+    },
+  };
+}
+
 export function parsePrism(content: string): ParsedPrism {
   const labels: Record<string, string[]> = {};
   const labelRegex = /label\s+"([^"]+)"\s*=\s*s=(\d+);/g;
@@ -19,18 +53,24 @@ export function parsePrism(content: string): ParsedPrism {
   }
 
   const nodesMap: Map<string, Node> = new Map();
-  const edges: Edge[] = [];
+  const rawEdges: Array<{
+    action: string;
+    sourceS: string;
+    sourceId: string;
+    targetS: string;
+    targetId: string;
+    prob: string;
+  }> = [];
+
   const transRegex = /\[([a-z_]+)\]\s*s=(\d+)\s*->\s*([^;]+);/g;
 
   while ((match = transRegex.exec(content)) !== null) {
     const action = match[1];
     const sourceS = match[2];
-    
-    // Choose the best label (usually the one that doesn't match an action name)
+
     const sLabels = labels[sourceS] || [];
     const sourceId = sLabels.find(l => l !== action && !l.includes('data')) || sLabels[0] || `S${sourceS}`;
-    
-    // Source Node
+
     if (!nodesMap.has(sourceId)) {
       nodesMap.set(sourceId, {
         id: sourceId,
@@ -41,24 +81,23 @@ export function parsePrism(content: string): ParsedPrism {
 
     const rhs = match[3];
     const parts = rhs.split("+").map(p => p.trim());
-    parts.forEach((part, idx) => {
+    parts.forEach(part => {
       let prob = "1.00";
       let targetS = "";
 
       const probMatch = part.match(/([\d\.]+):\s*\(s'=(\d+)\)/);
       if (probMatch) {
-         prob = probMatch[1];
-         targetS = probMatch[2];
+        prob = probMatch[1];
+        targetS = probMatch[2];
       } else {
-         const directMatch = part.match(/\(s'=(\d+)\)/);
-         if (directMatch) targetS = directMatch[1];
+        const directMatch = part.match(/\(s'=(\d+)\)/);
+        if (directMatch) targetS = directMatch[1];
       }
 
       if (targetS) {
         const tLabels = labels[targetS] || [];
-        // Heuristic: pick the longest label or the one that doesn't match an action
         const targetId = tLabels.find(l => l.length > 5 && !l.includes('data')) || tLabels[0] || `S${targetS}`;
-        
+
         if (!nodesMap.has(targetId)) {
           nodesMap.set(targetId, {
             id: targetId,
@@ -67,17 +106,7 @@ export function parsePrism(content: string): ParsedPrism {
           });
         }
 
-        const edgeId = `e-${sourceId}-${targetId}-${action}-${idx}`;
-        edges.push({
-          id: edgeId,
-          source: sourceId,
-          target: targetId,
-          // Always show probability
-          label: `${action} (${parseFloat(prob).toFixed(4)})`,
-          animated: true,
-          type: 'smoothstep',
-          markerEnd: { type: MarkerType.ArrowClosed, color: "#6366f1" }
-        });
+        rawEdges.push({ action, sourceS, sourceId, targetS, targetId, prob });
       }
     });
   }
@@ -87,109 +116,123 @@ export function parsePrism(content: string): ParsedPrism {
     const label = n.data.label as string;
     const sMatch = label.match(/S(\d+):/);
     const s = sMatch ? parseInt(sMatch[1]) : 0;
-    
-    // Strict Layout Coordinates with wider spread to avoid label overlap
-    let x = 500;
-    let y = 0;
-    if (s === 4) { x = 500; y = 100; }
-    else if (s === 3) { x = 500; y = 450; }
-    else if (s === 2) { x = -250; y = 900; } 
-    else if (s === 1) { x = 500; y = 900; }
-    else if (s === 0) { x = 1250; y = 900; }
-    else { x = s * 250; y = 1000; }
+
+    let x = 500, y = 0;
+    if (s === 4) { x = 600; y = 100; }
+    else if (s === 3) { x = 600; y = 380; }
+    else if (s === 2) { x = 50;  y = 680; }
+    else if (s === 1) { x = 600; y = 680; }
+    else if (s === 0) { x = 1150; y = 680; }
+    else { x = s * 250; y = 800; }
 
     return { ...n, position: { x, y }, type: 'stateNode' };
   });
 
-  // Add Origin Node 'O'
+  // Add Origin Node
   nodes.push({
     id: 'O',
     type: 'originNode',
     data: { label: '' },
-    position: { x: 595, y: 15 }, // Centered above S4 (S4 is at 500, width 200, so center 600. Node O is width 10, so 595)
+    position: { x: 795, y: -20 }, // centered above S4 (S4 at x=600, width=400 → center=800, node width=10 → 795)
   });
 
-  // Add Origin Edge O -> S4
-  edges.push({
-    id: 'e-O-S4',
-    source: 'O',
-    target: nodes.find(n => n.id.includes('Opportunity'))?.id || 'Opportunity_Spotted',
-    sourceHandle: 'bottom',
-    targetHandle: 'top-center',
-    type: 'straight',
-    label: 'start (1.0000)',
-    animated: false,
-  });
-
-  // Filter and Style Edges
   const finalEdges: Edge[] = [];
   const seenPairs = new Set<string>();
 
-  edges.forEach(edge => {
-    // Skip the origin edge we just added to process it specially if needed, but it's already in the list if we use finalEdges
-    if (edge.id === 'e-O-S4') {
-        finalEdges.push(edge);
-        return;
-    }
+  // Origin edge
+  const opportunityId = nodes.find(n => n.id.includes('Opportunity'))?.id || 'Opportunity_Spotted';
+  finalEdges.push(makeEdge('e-O-S4', 'O', opportunityId, 'start (1.0000)', {
+    sourceHandle: 'bottom',
+    targetHandle: 'top-center',
+    edgeType: 'straight',
+    animated: false,
+    labelPosition: 0.5,
+    labelOffsetX: 60,
+  }));
 
-    const source = edge.source;
-    const target = edge.target;
-    const pair = `${source}->${target}`;
-    
-    // Consolidate: only take the first transition for a pair unless it's the S3 <-> S1 bi-directional
-    const isS3S1 = (source.includes('Construction') && target.includes('Revert'));
-    const isS1S3 = (source.includes('Revert') && target.includes('Construction'));
+  rawEdges.forEach(({ action, sourceId, targetId, prob }) => {
+    const pair = `${sourceId}->${targetId}`;
+    const labelText = `${action} (${parseFloat(prob).toFixed(4)})`;
+    const isS3S1 = sourceId.includes('Construction') && targetId.includes('Revert');
+    const isS1S3 = sourceId.includes('Revert') && targetId.includes('Construction');
 
     if (isS3S1) {
-        // Arrow 1: S3 -> S1 (center-bottom to center-top)
-        edge.sourceHandle = 'bottom-left';
-        edge.targetHandle = 'top-left';
-        edge.type = 'straight';
-        edge.labelPosition = 0.25; // Offset upwards to avoid overlap with return line
-        finalEdges.push(edge);
+      // Left arrow: S3 bottom-left -> S1 top-left, label sits on the arrow
+      finalEdges.push(makeEdge(`e-${sourceId}-${targetId}-${action}`, sourceId, targetId, labelText, {
+        sourceHandle: 'bottom-left',
+        targetHandle: 'top-left',
+        edgeType: 'straight',
+        labelPosition: 0.4,
+        labelOffsetX: 0,
+        labelOffsetY: 0,
+      }));
     } else if (isS1S3) {
-        // Arrow 2: S1 -> S3 (center-top to center-bottom)
-        if (seenPairs.has(pair)) return; // Only one fetch_data arrow back
-        edge.sourceHandle = 'source-top-right';
-        edge.targetHandle = 'target-bottom-right';
-        edge.type = 'straight';
-        edge.labelPosition = 0.25; // Offset "upwards" relative to source S1, so it's towards the bottom of S3
-        finalEdges.push(edge);
-        seenPairs.add(pair);
+      if (seenPairs.has(pair)) return;
+      // Right arrow: S1 top-right -> S3 bottom-right, label sits on the arrow
+      finalEdges.push(makeEdge(`e-${sourceId}-${targetId}-${action}`, sourceId, targetId, labelText, {
+        sourceHandle: 'source-top-right',
+        targetHandle: 'target-bottom-right',
+        edgeType: 'straight',
+        labelPosition: 0.6,
+        labelOffsetX: 0,
+        labelOffsetY: 0,
+      }));
+      seenPairs.add(pair);
     } else {
-        if (seenPairs.has(pair)) return;
-        
-        // S3 -> S2, S3 -> S0
-        if (source.includes('Construction')) {
-            edge.type = 'straight';
-            if (target.includes('Confirmed')) {
-                edge.sourceHandle = 'bottom-left';
-                edge.targetHandle = 'top-center';
-            } else if (target.includes('Error')) {
-                edge.sourceHandle = 'bottom-right';
-                edge.targetHandle = 'top-center';
-            }
+      if (seenPairs.has(pair)) return;
+
+      if (sourceId.includes('Construction') && targetId.includes('Confirmed')) {
+        // S3 -> S2: diagonal left, label clearly pushed left
+        finalEdges.push(makeEdge(`e-${sourceId}-${targetId}-${action}`, sourceId, targetId, labelText, {
+          sourceHandle: 'bottom-left',
+          targetHandle: 'top-center',
+          edgeType: 'straight',
+          labelPosition: 0.5,
+          labelOffsetX: -140,
+          labelOffsetY: 10,
+        }));
+      } else if (sourceId.includes('Construction') && targetId.includes('Error')) {
+        // S3 -> S0: diagonal right, label clearly pushed right
+        finalEdges.push(makeEdge(`e-${sourceId}-${targetId}-${action}`, sourceId, targetId, labelText, {
+          sourceHandle: 'bottom-right',
+          targetHandle: 'top-center',
+          edgeType: 'straight',
+          labelPosition: 0.5,
+          labelOffsetX: 140,
+          labelOffsetY: 10,
+        }));
+      } else if (targetId.includes('Opportunity')) {
+        // Return arcs: S2->S4 (left side), S0->S4 (right side)
+        if (sourceId.includes('Confirmed')) {
+          finalEdges.push(makeEdge(`e-${sourceId}-${targetId}-${action}`, sourceId, targetId, labelText, {
+            sourceHandle: 'left-source',
+            targetHandle: 'left-target',
+            edgeType: 'smoothstep',
+            labelOffsetX: -20,
+          }));
+        } else if (sourceId.includes('Error')) {
+          finalEdges.push(makeEdge(`e-${sourceId}-${targetId}-${action}`, sourceId, targetId, labelText, {
+            sourceHandle: 'right-source',
+            targetHandle: 'right-target',
+            edgeType: 'smoothstep',
+            labelOffsetX: 20,
+          }));
         }
-        // S2 -> S4, S0 -> S4 (Returns)
-        else if (target.includes('Opportunity')) {
-            edge.type = 'smoothstep';
-            edge.animated = true;
-            if (source.includes('Confirmed')) {
-                edge.sourceHandle = 'left-source';
-                edge.targetHandle = 'left-target';
-            } else if (source.includes('Error')) {
-                edge.sourceHandle = 'right-source';
-                edge.targetHandle = 'right-target';
-            }
-        }
-        // S4 -> S3
-        else if (source.includes('Opportunity') && target.includes('Construction')) {
-            edge.type = 'straight';
-            edge.sourceHandle = 'bottom-center';
-            edge.targetHandle = 'top-center';
-        }
-        finalEdges.push(edge);
-        seenPairs.add(pair);
+      } else if (sourceId.includes('Opportunity') && targetId.includes('Construction')) {
+        // S4 -> S3 center vertical
+        finalEdges.push(makeEdge(`e-${sourceId}-${targetId}-${action}`, sourceId, targetId, labelText, {
+          sourceHandle: 'bottom-center',
+          targetHandle: 'top-center',
+          edgeType: 'straight',
+          labelOffsetX: 60,
+        }));
+      } else {
+        finalEdges.push(makeEdge(`e-${sourceId}-${targetId}-${action}`, sourceId, targetId, labelText, {
+          edgeType: 'straight',
+        }));
+      }
+
+      seenPairs.add(pair);
     }
   });
 
