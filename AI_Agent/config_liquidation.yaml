@@ -13,16 +13,10 @@ states:
   - "On_Chain_Revert"
   - "Network_Error"
 
-properties:
-  min_expected_cycles: "Rmin=?[ F \"TX_Confirmed\" ]"
-  max_prob_success: "Pmax=? [ F \"TX_Confirmed\" ]"
-  prob_missing_critical_action: "Pmax=? [ G !\"TX_Confirmed\" ]"
-
 actions:
   - "fetch_data"
   - "submit_tx"
   - "finalize"
-  - "adjust_params"
 
 safety_thresholds:
   min_prob_success: 0.80

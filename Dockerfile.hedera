@@ -7,16 +7,19 @@
 # Build (from the Agentguard/ root):
 #   docker build -t agentguard-hedera -f Dockerfile.hedera .
 #
+# NOTE: mount .env as a file (not --env-file) so python-dotenv parses it correctly,
+#       handling quoted values and inline comments exactly as local runs do.
+#
 # Run -- Command Prompt:
-#   docker run --rm --env-file AI_Agent/.env -v "%CD%\Runtime_verification:/app/Runtime_verification" agentguard-hedera
-#   docker run --rm --env-file AI_Agent/.env -v "%CD%\Runtime_verification:/app/Runtime_verification" agentguard-hedera liquidation
+#   docker run --rm -v "%CD%\AI_Agent\.env:/app/AI_Agent/.env" -v "%CD%\Runtime_verification:/app/Runtime_verification" agentguard-hedera
+#   docker run --rm -v "%CD%\AI_Agent\.env:/app/AI_Agent/.env" -v "%CD%\Runtime_verification:/app/Runtime_verification" agentguard-hedera liquidation
 #
 # Run -- PowerShell:
-#   docker run --rm --env-file AI_Agent/.env -v "${PWD}\Runtime_verification:/app/Runtime_verification" agentguard-hedera
-#   docker run --rm --env-file AI_Agent/.env -v "${PWD}\Runtime_verification:/app/Runtime_verification" agentguard-hedera liquidation
+#   docker run --rm -v "${PWD}\AI_Agent\.env:/app/AI_Agent/.env" -v "${PWD}\Runtime_verification:/app/Runtime_verification" agentguard-hedera
+#   docker run --rm -v "${PWD}\AI_Agent\.env:/app/AI_Agent/.env" -v "${PWD}\Runtime_verification:/app/Runtime_verification" agentguard-hedera liquidation
 #
 # Run -- Git Bash / MSYS:
-#   MSYS_NO_PATHCONV=1 docker run --rm --env-file AI_Agent/.env -v "${PWD}/Runtime_verification:/app/Runtime_verification" agentguard-hedera
+#   MSYS_NO_PATHCONV=1 docker run --rm -v "${PWD}/AI_Agent/.env:/app/AI_Agent/.env" -v "${PWD}/Runtime_verification:/app/Runtime_verification" agentguard-hedera
 # ──────────────────────────────────────────────────────────────────────
 
 FROM movesrwth/stormpy:stable

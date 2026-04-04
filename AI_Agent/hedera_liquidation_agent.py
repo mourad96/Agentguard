@@ -121,9 +121,9 @@ ROUND_PROMPTS = [
 
 
 async def main() -> None:
-    account_id_str = (os.getenv("ACCOUNT_ID") or "").strip().strip('"\'')
-    private_key_str = (os.getenv("PRIVATE_KEY") or "").strip().strip('"\'')
-    receiver = os.getenv("RECEIVER_ACCOUNT_ID", "0.0.4815862").strip().strip('"\'')
+    account_id_str = os.getenv("ACCOUNT_ID")
+    private_key_str = os.getenv("PRIVATE_KEY")
+    receiver = os.getenv("RECEIVER_ACCOUNT_ID", "0.0.4815862")
 
     if not account_id_str or not private_key_str:
         sys.exit("ERROR: Set ACCOUNT_ID and PRIVATE_KEY in your .env file.")
@@ -177,7 +177,7 @@ async def main() -> None:
     print(f"  Verification interval: every 3 transitions\n")
 
     # ── LangChain agent ──────────────────────────────────────────────
-    gemini_key = (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "").strip().strip('"\'') or None
+    gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",
         google_api_key=gemini_key,
@@ -206,10 +206,6 @@ async def main() -> None:
         print(f"  Round {i}/{len(ROUND_PROMPTS)}: {prompt[:70]}{'...' if len(prompt) > 70 else ''}")
         print(f"{'─' * 64}")
 
-        guard.log_transition(
-            guarded.state, "fetch_data", "TX_Construction",
-        )
-
         try:
             response = await agent.ainvoke(
                 {"messages": [{"role": "user", "content": prompt}]},
@@ -220,11 +216,8 @@ async def main() -> None:
         except Exception as exc:
             log.error("Round %d failed: %s", i, exc)
             print(f"\n  [ERROR] {exc}")
-            guard.log_transition(guarded.state, "submit_tx", "On_Chain_Revert")
-            guard.log_transition("On_Chain_Revert", "adjust_params", "TX_Construction")
-
-        if not _HALT_EVENT.is_set():
-            guard.log_transition(guarded.state, "finalize", "Opportunity_Spotted")
+            if guarded.state not in ("On_Chain_Revert", "Network_Error"):
+                guarded.log(guarded.state, "submit_tx", "On_Chain_Revert")
 
     else:
         if not _HALT_EVENT.is_set():
