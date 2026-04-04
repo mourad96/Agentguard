@@ -1,0 +1,40 @@
+agent:
+  name: "HederaDeFiAgent"
+  verification_interval: 5
+
+seed_from_previous: false
+seed_weight: 5
+
+states:
+  - "Idle"
+  - "Planning"
+  - "Querying_Balance"
+  - "Transferring_HBAR"
+  - "Creating_Token"
+  - "Minting_Token"
+  - "Transferring_Token"
+  - "TX_Confirmed"
+  - "TX_Failed"
+
+properties:
+  min_expected_cycles: "Rmin=?[ F \"TX_Confirmed\" ]"
+  max_prob_success: "Pmax=? [ F \"TX_Confirmed\" ]"
+  prob_missing_critical_action: "Pmax=? [ G !\"TX_Confirmed\" ]"
+
+actions:
+  - "agent_think"
+  - "get_account_balance"
+  - "transfer_hbar"
+  - "create_token"
+  - "mint_token"
+  - "transfer_token"
+  - "tx_success"
+  - "tx_error"
+  - "query_complete"
+  - "reset"
+  - "retry"
+
+safety_thresholds:
+  min_prob_success: 0.70
+  max_expected_cycles: 15.0
+  max_prob_missing_critical: 0.2

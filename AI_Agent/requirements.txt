@@ -1,0 +1,14 @@
+# AgentGuard AI Agent -- Hedera Testnet Integration
+# Core Hedera Agent Kit (pins langchain==1.2.10 and hiero-sdk-python==0.2.0 transitively)
+hedera-agent-kit==3.3.0
+
+# langgraph>=1.1.6 required: langgraph-prebuilt 1.0.9 imports ExecutionInfo from langgraph.runtime,
+# which is absent in langgraph 1.0.x despite being listed as a compatible version by langchain.
+langgraph>=1.1.6
+
+# Google Gemini LLM provider (langchain and langgraph versions resolved by hedera-agent-kit)
+langchain-google-genai>=2.1.4
+
+# Environment & config
+python-dotenv
+pyyaml>=6.0
