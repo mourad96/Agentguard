@@ -15,6 +15,8 @@ export default function App() {
   const [activeNode, setActiveNode] = useState("Opportunity_Spotted");
   const [stutterCount, setStutterCount] = useState(0);
   const [isHalted, setIsHalted] = useState(false);
+  // false on initial load → only boxes shown; true after first manual Refresh click → edges visible forever
+  const [hasRefreshed, setHasRefreshed] = useState(false);
 
   const [graphData, setGraphData] = useState<{ nodes: Node[], edges: Edge[] }>({ nodes: [], edges: [] });
 
@@ -133,6 +135,7 @@ export default function App() {
               setStutterCount(0);
             }
 
+
             return next;
           });
       }, 700); 
@@ -153,7 +156,7 @@ export default function App() {
         <div className="header__controls">
           <button 
             className="btn-simulate active"
-            onClick={() => refreshModel()}
+            onClick={() => { setHasRefreshed(true); refreshModel(); }}
           >
             🔄 Refresh Diagram
           </button>
@@ -174,7 +177,8 @@ export default function App() {
                 <StateTransitionGraph 
                   nodes={graphData.nodes}
                   edges={graphData.edges}
-                  activeNode={activeNode} 
+                  activeNode={activeNode}
+                  showEdges={hasRefreshed}
                 />
               </ReactFlowProvider>
             </div>
