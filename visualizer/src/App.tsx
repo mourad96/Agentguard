@@ -1,21 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
 import { ReactFlowProvider, type Node, type Edge } from "@xyflow/react";
 
-import { MetricsPanel } from "./MetricsPanel";
 import { StateTransitionGraph } from "./StateTransitionGraph";
 import { parsePrism } from "./utils/prismParser";
 import { 
   mockTransitions, 
-  initialMetrics, 
   INITIAL_PROPERTIES,
-  type MetricPoint,
   type AGProperty
 } from "./data/mockAgentData";
 import "./App.css";
 
 export default function App() {
   const [step, setStep] = useState(1);
-  const [metricsHistory, setMetricsHistory] = useState<MetricPoint[]>(initialMetrics);
   const [properties, setProperties] = useState<AGProperty[]>(INITIAL_PROPERTIES);
   const [isSimulating, setIsSimulating] = useState(false);
   const [activeNode, setActiveNode] = useState("Opportunity_Spotted");
@@ -48,18 +44,7 @@ export default function App() {
     }
   }, [properties, isSimulating, isHalted]);
 
-  const handleOverride = (name: string, valueStr: string) => {
-    const val = parseFloat(valueStr);
-    if (isNaN(val)) return;
-    
-    setProperties(prev => prev.map(p => {
-      if (p.name !== name) return p;
-      let status: "[OK]" | "[VIOLATED]" = "[OK]";
-      if (p.direction === "below" && val > p.threshold) status = "[VIOLATED]";
-      if (p.direction === "above" && val < p.threshold) status = "[VIOLATED]";
-      return { ...p, value: val, status };
-    }));
-  };
+
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -88,16 +73,6 @@ export default function App() {
                 newProps[cyclesIndex].value = newVal;
                 newProps[cyclesIndex].status = newVal <= newProps[cyclesIndex].threshold ? "[OK]" : "[VIOLATED]";
               }
-
-              setMetricsHistory(hist => [
-                ...hist,
-                {
-                  step: nextStep,
-                  min_expected_cycles: newProps.find(p => p.name === "min_expected_cycles")?.value || 0,
-                  max_prob_success: newProps.find(p => p.name === "max_prob_success")?.value || 0,
-                  prob_missing_critical_action: newProps.find(p => p.name === "prob_missing_critical_action")?.value || 0,
-                }
-              ]);
 
               return newProps;
             });
@@ -150,7 +125,7 @@ export default function App() {
         <div>
           <h1 className="app__title">AgentGuard Dashboard</h1>
           <p className="app__subtitle">
-            Left: Verification & MDP State • Right: Dynamic Safety Constraints
+            Agent Verification & State Machine Monitoring
           </p>
         </div>
         <div className="header__controls">
@@ -165,7 +140,6 @@ export default function App() {
       </header>
 
       <main className="app__main">
-        <section className="left-pane">
           <div className="panel panel--properties">
             <div className="panel__head">
               <h2 className="panel__title">AgentGuard Properties</h2>
@@ -181,7 +155,6 @@ export default function App() {
                     <th>Threshold</th>
                     <th>Dir</th>
                     <th>Status</th>
-                    <th>Override</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -193,16 +166,6 @@ export default function App() {
                       <td>{p.direction}</td>
                       <td className={`status ${p.status === "[OK]" ? "status-ok" : "status-viol"}`}>
                         {p.status}
-                      </td>
-                      <td>
-                        <input 
-                          type="number"
-                          step="0.01"
-                          className="override-input"
-                          defaultValue={p.value}
-                          onBlur={(e) => handleOverride(p.name, e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && handleOverride(p.name, e.currentTarget.value)}
-                        />
                       </td>
                     </tr>
                   ))}
@@ -216,25 +179,16 @@ export default function App() {
               <h2 className="panel__title">Agent State Machine</h2>
               <span className="panel__badge">Architecture Reference</span>
             </div>
-            <ReactFlowProvider>
-              <StateTransitionGraph 
-                nodes={graphData.nodes}
-                edges={graphData.edges}
-                activeNode={activeNode} 
-              />
-            </ReactFlowProvider>
-          </div>
-        </section>
-
-        <section className="right-pane">
-          <div className="panel panel--charts" aria-label="Metrics Dashboard">
-            <div className="panel__head">
-              <h2 className="panel__title">Runtime Metrics</h2>
-              <span className="panel__badge">Recharts</span>
+            <div className="transition-graph">
+              <ReactFlowProvider>
+                <StateTransitionGraph 
+                  nodes={graphData.nodes}
+                  edges={graphData.edges}
+                  activeNode={activeNode} 
+                />
+              </ReactFlowProvider>
             </div>
-            <MetricsPanel metrics={metricsHistory} />
           </div>
-        </section>
       </main>
     </div>
   );
