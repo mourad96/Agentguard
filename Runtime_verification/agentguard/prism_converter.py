@@ -1,13 +1,17 @@
 """
-PRISM Converter — translates the learned MDP into a PRISM-language model.
+PRISM Converter -- translates the learned MDP into a PRISM-language model.
 
-The generated PRISM file can be fed to Storm (via stormpy) or inspected
-manually. The converter handles:
-  • State name → integer mapping
-  • Guarded commands with probabilistic branches
-  • Labels for goal / error states
-  • Reward structures
-  • Deadlock mitigation (self-loops for absorbing states)
+Output format matches the target specification:
+  * No auto-generated comment header -- just "mdp"
+  * State map: initial state gets the HIGHEST integer index
+  * Transition probabilities formatted to 4 decimal places (e.g. 1.0000)
+  * Labels for every state name AND every action name
+    - State labels: label "<Name>" = s=<id>;
+    - Action labels: label "<action>" = s=<src1> | s=<src2> | ...;
+      (action label = all SOURCE states where that action is enabled)
+  * Deadlock self-loop uses [wait] with probability 1.0
+  * Reward structure named after config.reward_name (default "cycles")
+    with value 1.00 per transition
 """
 
 from __future__ import annotations
@@ -46,9 +50,10 @@ class PRISMConverter:
         sections: list[str] = [
             self._header(),
             self._module(mdp, state_map, transitions),
-            self._labels(mdp, state_map),
+            self._labels(mdp, state_map, transitions),
             self._rewards(mdp, state_map, transitions),
         ]
+        # Join with a single newline; each section already ends properly
         prism_model = "\n".join(sections)
 
         if output_path:
@@ -61,15 +66,27 @@ class PRISMConverter:
     # ── Internals ─────────────────────────────────────────────────────
 
     def _build_state_map(self, mdp: MDPModel) -> Dict[str, int]:
-        """Map state names to integer IDs, initial state always → 0."""
-        ordered: list[str] = [mdp.initial_state]
-        for s in mdp.states:
-            if s != mdp.initial_state:
-                ordered.append(s)
-        return {name: idx for idx, name in enumerate(ordered)}
+        """
+        Map state names to integer IDs.
+
+        Assignment order (matches target model):
+          - All non-initial states get IDs 0, 1, 2, ... in sorted order.
+          - The initial state gets the highest ID (len(states) - 1).
+        """
+        all_states = sorted(mdp.states)
+        initial = mdp.initial_state
+        non_initial = [s for s in all_states if s != initial]
+
+        # non-initial states are numbered 0 .. N-2 in sorted order
+        state_map: Dict[str, int] = {}
+        for idx, name in enumerate(non_initial):
+            state_map[name] = idx
+        # initial state gets the last (highest) ID
+        state_map[initial] = len(all_states) - 1
+        return state_map
 
     def _header(self) -> str:
-        return "// AgentGuard — auto-generated PRISM model\nmdp\n"
+        return "mdp\n"
 
     def _module(
         self,
@@ -78,70 +95,68 @@ class PRISMConverter:
         transitions: Dict[Tuple[str, str], Dict[str, float]],
     ) -> str:
         n = len(state_map)
+        init_id = state_map[mdp.initial_state]
         lines = [
-            f"module agent",
-            f"  s : [0..{n - 1}] init {state_map[mdp.initial_state]};",
+            "module agent",
+            f"    s : [0..{n - 1}] init {init_id};",
             "",
         ]
 
-        # Collect states that already have outgoing transitions
-        states_with_actions: Set[str] = {s for (s, _) in transitions}
-
+        # Sort by (from_state_id, action) for deterministic output
         for (from_state, action), dist in sorted(
-            transitions.items(), key=lambda x: (state_map.get(x[0][0], 0), x[0][1])
+            transitions.items(),
+            key=lambda x: (state_map.get(x[0][0], 0), x[0][1]),
         ):
             sid = state_map[from_state]
             branches = " + ".join(
-                f"{prob:.6f} : (s'={state_map[to_state]})"
-                for to_state, prob in sorted(dist.items(), key=lambda x: state_map[x[0]])
+                f"{prob:.4f}:(s'={state_map[to_state]})"
+                for to_state, prob in sorted(
+                    dist.items(), key=lambda x: state_map[x[0]]
+                )
             )
             safe_action = self._safe_action_name(action)
-            lines.append(f"  [{safe_action}] s={sid} -> {branches};")
+            lines.append(f"    [{safe_action}] s={sid} -> {branches};")
 
-        # Deadlock mitigation: add self-loops for absorbing states
+        # Deadlock mitigation: [wait] self-loop for absorbing states
+        states_with_actions: Set[str] = {s for (s, _) in transitions}
         for state_name, sid in sorted(state_map.items(), key=lambda x: x[1]):
             if state_name not in states_with_actions:
-                lines.append(f"  [_stay] s={sid} -> 1.000000 : (s'={sid});")
+                lines.append(f"    [wait] s={sid} -> 1.0:(s'={sid});")
 
-        lines.append("")
         lines.append("endmodule")
         return "\n".join(lines)
 
-    def _labels(self, mdp: MDPModel, state_map: Dict[str, int]) -> str:
-        lines = ["\n// --- Labels ---"]
+    def _labels(
+        self,
+        mdp: MDPModel,
+        state_map: Dict[str, int],
+        transitions: Dict[Tuple[str, str], Dict[str, float]],
+    ) -> str:
+        """
+        Emit two kinds of labels (both sorted alphabetically):
 
-        # Goal label
-        goal_ids = [
-            str(state_map[s])
-            for s in self.config.goal_states
-            if s in state_map
-        ]
-        if goal_ids:
-            expr = " | ".join(f"s={gid}" for gid in goal_ids)
-            lines.append(f'label "goal" = {expr};')
+        1. State labels  -- label "<StateName>" = s=<id>;
+        2. Action labels -- label "<action>" = s=<src1> | s=<src2> | ...;
+           The RHS is the set of SOURCE states where that action is enabled.
+        """
+        lines: list[str] = [""]
 
-        # Error label
-        error_ids = [
-            str(state_map[s])
-            for s in self.config.error_states
-            if s in state_map
-        ]
-        if error_ids:
-            expr = " | ".join(f"s={eid}" for eid in error_ids)
-            lines.append(f'label "error" = {expr};')
+        # 1. State name labels (sorted by state name)
+        for state_name, sid in sorted(state_map.items(), key=lambda x: x[0]):
+            lines.append(f'label "{state_name}" = s={sid};')
 
-        # Action-based labels (every action that leads to a state)
-        action_targets: Dict[str, Set[int]] = {}
-        for (_, action), dist in mdp.get_all_transition_data().items():
+        # 2. Action source-state labels
+        # Collect source states per action
+        action_sources: Dict[str, Set[int]] = {}
+        for (from_state, action) in transitions:
             safe = self._safe_action_name(action)
-            if safe not in action_targets:
-                action_targets[safe] = set()
-            for to_state in dist:
-                action_targets[safe].add(state_map[to_state])
+            if safe not in action_sources:
+                action_sources[safe] = set()
+            action_sources[safe].add(state_map[from_state])
 
-        for action_name, target_ids in sorted(action_targets.items()):
-            expr = " | ".join(f"s={tid}" for tid in sorted(target_ids))
-            lines.append(f'label "did_{action_name}" = {expr};')
+        for action_name, src_ids in sorted(action_sources.items()):
+            expr = " | ".join(f"s={sid}" for sid in sorted(src_ids))
+            lines.append(f'label "{action_name}" = {expr};')
 
         return "\n".join(lines)
 
@@ -151,29 +166,31 @@ class PRISMConverter:
         state_map: Dict[str, int],
         transitions: Dict[Tuple[str, str], Dict[str, float]],
     ) -> str:
-        if not self.config.rewards:
-            return ""
+        """
+        Emit a rewards block named after config.reward_name.
 
-        sections: list[str] = []
-        for reward in self.config.rewards:
-            lines = [f'\nrewards "{reward.name}"']
-            if reward.type == "transition":
-                for (from_state, action) in sorted(
-                    transitions.keys(),
-                    key=lambda x: (state_map.get(x[0], 0), x[1]),
-                ):
-                    sid = state_map[from_state]
-                    safe_action = self._safe_action_name(action)
-                    lines.append(
-                        f"  [{safe_action}] s={sid} : {reward.value};"
-                    )
-            elif reward.type == "state":
-                for state_name, sid in sorted(state_map.items(), key=lambda x: x[1]):
-                    lines.append(f"  s={sid} : {reward.value};")
-            lines.append("endrewards")
-            sections.append("\n".join(lines))
+        Every transition (including the [wait] self-loop) costs 1.00.
+        """
+        reward_name = getattr(self.config, "reward_name", "cycles")
+        lines = [f'\nrewards "{reward_name}"']
 
-        return "\n".join(sections)
+        # Real transitions
+        for (from_state, action) in sorted(
+            transitions.keys(),
+            key=lambda x: (state_map.get(x[0], 0), x[1]),
+        ):
+            sid = state_map[from_state]
+            safe_action = self._safe_action_name(action)
+            lines.append(f"    [{safe_action}] s={sid} : 1.00;")
+
+        # [wait] self-loops for absorbing states
+        states_with_actions: Set[str] = {s for (s, _) in transitions}
+        for state_name, sid in sorted(state_map.items(), key=lambda x: x[1]):
+            if state_name not in states_with_actions:
+                lines.append(f"    [wait] s={sid} : 1.0;")
+
+        lines.append("endrewards")
+        return "\n".join(lines)
 
     @staticmethod
     def _safe_action_name(action: str) -> str:

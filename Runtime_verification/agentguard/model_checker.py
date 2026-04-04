@@ -84,23 +84,27 @@ class MockChecker(_BaseChecker):
     def _estimate(self, prop: dict, info: dict) -> float:
         pctl: str = prop["pctl"]
 
-        # Probability queries  →  return value in [0, 1]
+        # Probability queries  ->  return value in [0, 1]
         if "Pmax" in pctl or "Pmin" in pctl:
-            if '"goal"' in pctl:
-                # More transitions toward goal → higher probability
+            if '"Fix_Success"' in pctl or '"goal"' in pctl:
+                # More transitions toward goal -> higher probability
                 goal_ratio = info["goal_transitions"] / max(info["total_transitions"], 1)
                 base = 0.5 + 0.5 * goal_ratio
-            elif '"error"' in pctl:
+            elif '"error"' in pctl or '"Error"' in pctl:
                 error_ratio = info["error_transitions"] / max(info["total_transitions"], 1)
                 base = error_ratio
+            elif 'G !' in pctl:
+                # Probability of globally NOT doing something -> low (agent usually does it)
+                base = random.uniform(0.02, 0.12)
             else:
                 base = random.uniform(0.3, 0.9)
             # Add small noise
             return max(0.0, min(1.0, base + random.uniform(-0.05, 0.05)))
 
-        # Reward / expected-value queries  →  return value ≥ 0
+        # Reward / expected-value queries  ->  return value >= 0
         if "Rmin" in pctl or "Rmax" in pctl:
-            return float(info["n_states"]) + random.uniform(0, 3)
+            # Expected number of steps/cycles to reach goal
+            return float(info["n_states"]) * 1.5 + random.uniform(0, 5)
 
         return random.uniform(0.0, 1.0)
 
@@ -110,12 +114,12 @@ class MockChecker(_BaseChecker):
     def _parse_model_info(prism_model: str) -> dict:
         n_states = len(re.findall(r"s'=\d+", prism_model))
         total_cmds = len(re.findall(r"\[.*?\]", prism_model))
-        has_goal = '"goal"' in prism_model
-        has_error = '"error"' in prism_model
+        has_goal = '"goal"' in prism_model or '"Fix_Success"' in prism_model
+        has_error = '"error"' in prism_model or '"Error"' in prism_model
 
         # Count transitions involving goal / error labels
-        goal_trans = prism_model.count('"goal"')
-        error_trans = prism_model.count('"error"')
+        goal_trans = prism_model.count('"goal"') + prism_model.count('"Fix_Success"')
+        error_trans = prism_model.count('"error"') + prism_model.count('"Error"')
 
         return {
             "n_states": max(n_states, 1),

@@ -1,63 +1,37 @@
-# ──────────────────────────────────────────────────────────────────────
-# AgentGuard — Configuration File
-# ──────────────────────────────────────────────────────────────────────
-# This file defines the agent's semantic states, available actions,
-# PCTL properties to verify, and verification engine settings.
-# Modify this file to adapt AgentGuard to *any* agent scenario without
-# touching the agent's source code.
-# ──────────────────────────────────────────────────────────────────────
+agent:
+  name: "AgentGuard"
+  verification_interval: 10 # Check every 10 transitions
 
-agentguard:
+# Define state names for reference and readability, though unseen states will be added dynamically.
+states:
+  - "Init"
+  - "Analyzing"
+  - "Fixing"
+  - "Fix_Success"
+  - "Fix_Failed"
+  - "Error"
 
-  # ── Semantic States ───────────────────────────────────────────────
-  states:
-    - name: "idle"
-      is_initial: true
-    - name: "searching"
-    - name: "summarizing"
-    - name: "writing"
-    - name: "done"
-      is_goal: true
-    - name: "error"
-      is_error: true
+# Define the properties to verify
+properties:
+  # Expected minimum cycles/reward to finish (cost)
+  # R{"cycles"}min=? [ F "Fix_Success" ] represents expected minimum reward "cycles".
+  # Wait, standard expected reward in PRISM syntax is R{"cycles"}min=? [ F "Fix_Success" ]
+  min_expected_cycles: "Rmin=?[ F \"Fix_Success\" ]"
 
-  # ── Actions ───────────────────────────────────────────────────────
-  actions:
-    - "search"
-    - "summarize"
-    - "write"
-    - "finish"
-    - "fail"
-    - "retry"
+  # Max probability of successfully reaching the "Fix_Success" state
+  max_prob_success: "Pmax=? [ F \"Fix_Success\" ]"
 
-  # ── PCTL Properties ──────────────────────────────────────────────
-  # Each property is verified every `check_interval` transitions.
-  # `direction` specifies whether the computed value must be "above"
-  # or "below" the threshold to be considered safe.
-  properties:
-    - name: "Goal Reachability"
-      pctl: 'Pmax=? [F "goal"]'
-      threshold: 0.7
-      direction: "above"       # P(reach goal) should be HIGH
+  # Max probability of NOT invoking write_fix globally
+  prob_missing_critical_action: "Pmax=? [ G !\"write_fix\" ]"
 
-    - name: "Error Avoidance"
-      pctl: 'Pmax=? [F "error"]'
-      threshold: 0.3
-      direction: "below"       # P(reach error) should be LOW
+# Actions the agent can perform
+actions:
+  - "read_file"
+  - "run_tests"
+  - "write_fix"
+  - "finalize"
 
-    - name: "Expected Steps to Goal"
-      pctl: 'Rmin=? [F "goal"]'
-      threshold: 10
-      direction: "below"       # fewer steps = better
-
-  # ── Verification Engine Settings ──────────────────────────────────
-  verification:
-    check_interval: 5          # run verification every N transitions
-    use_storm: false           # false = mock checker (no C++ dep)
-    prism_output: "latest_model.prism"
-
-  # ── Reward Structure ──────────────────────────────────────────────
-  rewards:
-    - name: "steps"
-      type: "transition"
-      value: 1                 # every transition costs 1 step
+safety_thresholds:
+  min_prob_success: 0.8
+  max_expected_cycles: 50.0
+  max_prob_missing_critical: 0.1

@@ -3,6 +3,19 @@ Configuration loader for AgentGuard.
 
 Reads and validates the YAML configuration file that defines the agent's
 semantic states, actions, PCTL properties, and verification settings.
+
+New flat schema (top-level keys):
+  agent:
+    name: str
+    verification_interval: int
+  states: [str, ...]
+  actions: [str, ...]
+  properties:
+    <key>: <pctl_string>
+  safety_thresholds:
+    min_prob_success: float
+    max_expected_cycles: float
+    max_prob_missing_critical: float
 """
 
 from __future__ import annotations
@@ -10,84 +23,110 @@ from __future__ import annotations
 import yaml
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 
-# ──────────────────────────────────────────────────────────────────────
+# ----------------------------------------------------------------------
 # Data classes
-# ──────────────────────────────────────────────────────────────────────
-
-@dataclass
-class StateDefinition:
-    """A semantic state the agent can occupy."""
-    name: str
-    is_initial: bool = False
-    is_goal: bool = False
-    is_error: bool = False
-
+# ----------------------------------------------------------------------
 
 @dataclass
 class PropertyDefinition:
     """A PCTL property to verify, with an optional threshold."""
-    name: str
-    pctl: str
+    name: str        # key from the properties map
+    pctl: str        # raw PCTL formula string
     threshold: Optional[float] = None
-    direction: str = "above"          # "above" or "below"
+    direction: str = "above"   # "above" or "below"
 
 
 @dataclass
-class RewardDefinition:
-    """A reward (cost) structure attached to the MDP."""
-    name: str
-    type: str = "transition"          # "transition" or "state"
-    value: float = 1.0
-
-
-@dataclass
-class VerificationSettings:
-    """Knobs for the background verification engine."""
-    check_interval: int = 5           # verify every N transitions
-    use_storm: bool = False           # False → mock mode
-    prism_output: str = "latest_model.prism"
+class SafetyThresholds:
+    """Safety threshold values read from the config."""
+    min_prob_success: float = 0.8
+    max_expected_cycles: float = 50.0
+    max_prob_missing_critical: float = 0.1
 
 
 @dataclass
 class AgentGuardConfig:
     """Top-level configuration object."""
-    states: List[StateDefinition] = field(default_factory=list)
+    agent_name: str = "Agent"
+    verification_interval: int = 10
+    states: List[str] = field(default_factory=list)
     actions: List[str] = field(default_factory=list)
     properties: List[PropertyDefinition] = field(default_factory=list)
-    rewards: List[RewardDefinition] = field(default_factory=list)
-    verification: VerificationSettings = field(
-        default_factory=VerificationSettings
-    )
+    thresholds: SafetyThresholds = field(default_factory=SafetyThresholds)
+    prism_output: str = "latest_model.prism"
+    use_storm: bool = False
+    reward_name: str = "cycles"
 
     # ── Convenience helpers ───────────────────────────────────────────
 
     @property
     def initial_state(self) -> str:
-        """Return the name of the initial state (first one marked)."""
-        for s in self.states:
-            if s.is_initial:
-                return s.name
-        return self.states[0].name if self.states else "unknown"
+        """First state in the list is considered the initial state."""
+        return self.states[0] if self.states else "Init"
 
     @property
     def goal_states(self) -> List[str]:
-        return [s.name for s in self.states if s.is_goal]
+        """States containing 'success' or 'done' in their name (case-insensitive)."""
+        return [s for s in self.states if "success" in s.lower() or "done" in s.lower()]
 
     @property
     def error_states(self) -> List[str]:
-        return [s.name for s in self.states if s.is_error]
+        """States containing 'error' or 'failed' in their name (case-insensitive)."""
+        return [s for s in self.states if "error" in s.lower() or "failed" in s.lower()]
 
     @property
     def state_names(self) -> List[str]:
-        return [s.name for s in self.states]
+        return list(self.states)
+
+    # ── Backward-compat shim used by analyzer ─────────────────────────
+    class _VerifCompat:
+        def __init__(self, interval: int, use_storm: bool, prism_output: str):
+            self.check_interval = interval
+            self.use_storm = use_storm
+            self.prism_output = prism_output
+
+    @property
+    def verification(self):
+        return self._VerifCompat(
+            self.verification_interval,
+            self.use_storm,
+            self.prism_output,
+        )
 
 
-# ──────────────────────────────────────────────────────────────────────
+# ----------------------------------------------------------------------
 # Loader
-# ──────────────────────────────────────────────────────────────────────
+# ----------------------------------------------------------------------
+
+def _build_property_definitions(
+    properties_map: Dict[str, str],
+    thresholds: SafetyThresholds,
+) -> List[PropertyDefinition]:
+    """Convert the flat properties dict into PropertyDefinition objects
+    and attach threshold / direction from the safety_thresholds block."""
+    defs: List[PropertyDefinition] = []
+
+    for key, pctl in properties_map.items():
+        prop = PropertyDefinition(name=key, pctl=pctl)
+
+        # Attach threshold based on key name conventions
+        if key == "max_prob_success":
+            prop.threshold = thresholds.min_prob_success
+            prop.direction = "above"
+        elif key == "min_expected_cycles":
+            prop.threshold = thresholds.max_expected_cycles
+            prop.direction = "below"
+        elif key == "prob_missing_critical_action":
+            prop.threshold = thresholds.max_prob_missing_critical
+            prop.direction = "below"
+
+        defs.append(prop)
+
+    return defs
+
 
 def load_config(path: str | Path) -> AgentGuardConfig:
     """Parse *path* and return a validated :class:`AgentGuardConfig`."""
@@ -96,57 +135,38 @@ def load_config(path: str | Path) -> AgentGuardConfig:
         raise FileNotFoundError(f"Config file not found: {path}")
 
     with open(path, "r", encoding="utf-8") as fh:
-        raw: dict[str, Any] = yaml.safe_load(fh)
+        raw: Dict[str, Any] = yaml.safe_load(fh)
 
-    root: dict[str, Any] = raw.get("agentguard", raw)
-
-    # --- States ---
-    states = [
-        StateDefinition(
-            name=s["name"],
-            is_initial=s.get("is_initial", False),
-            is_goal=s.get("is_goal", False),
-            is_error=s.get("is_error", False),
-        )
-        for s in root.get("states", [])
-    ]
-
-    # --- Actions ---
-    actions: list[str] = root.get("actions", [])
-
-    # --- Properties ---
-    properties = [
-        PropertyDefinition(
-            name=p["name"],
-            pctl=p["pctl"],
-            threshold=p.get("threshold"),
-            direction=p.get("direction", "above"),
-        )
-        for p in root.get("properties", [])
-    ]
-
-    # --- Rewards ---
-    rewards = [
-        RewardDefinition(
-            name=r["name"],
-            type=r.get("type", "transition"),
-            value=r.get("value", 1.0),
-        )
-        for r in root.get("rewards", [])
-    ]
-
-    # --- Verification settings ---
-    v_raw = root.get("verification", {})
-    verification = VerificationSettings(
-        check_interval=v_raw.get("check_interval", 5),
-        use_storm=v_raw.get("use_storm", False),
-        prism_output=v_raw.get("prism_output", "latest_model.prism"),
+    # ── agent block ───────────────────────────────────────────────────
+    agent_block = raw.get("agent", {})
+    agent_name: str = agent_block.get("name", "Agent")
+    verification_interval: int = int(
+        agent_block.get("verification_interval", 10)
     )
 
+    # ── states / actions ──────────────────────────────────────────────
+    states: List[str] = raw.get("states", [])
+    actions: List[str] = raw.get("actions", [])
+
+    # ── safety thresholds ─────────────────────────────────────────────
+    t_raw = raw.get("safety_thresholds", {})
+    thresholds = SafetyThresholds(
+        min_prob_success=float(t_raw.get("min_prob_success", 0.8)),
+        max_expected_cycles=float(t_raw.get("max_expected_cycles", 50.0)),
+        max_prob_missing_critical=float(
+            t_raw.get("max_prob_missing_critical", 0.1)
+        ),
+    )
+
+    # ── properties ────────────────────────────────────────────────────
+    props_raw: Dict[str, str] = raw.get("properties", {})
+    properties = _build_property_definitions(props_raw, thresholds)
+
     return AgentGuardConfig(
+        agent_name=agent_name,
+        verification_interval=verification_interval,
         states=states,
         actions=actions,
         properties=properties,
-        rewards=rewards,
-        verification=verification,
+        thresholds=thresholds,
     )

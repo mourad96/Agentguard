@@ -134,9 +134,9 @@ class Actuator:
             icon = ICONS[tr.severity]
             color = COLORS[tr.severity]
             thresh_str = (
-                f"{tr.threshold}" if tr.threshold is not None else "  —"
+                f"{tr.threshold}" if tr.threshold is not None else "  N/A"
             )
-            dir_str = tr.direction if tr.threshold is not None else "  —"
+            dir_str = tr.direction if tr.threshold is not None else "  N/A"
             print(
                 f"  {tr.check.property_name:<28} "
                 f"{color}{tr.check.value:>10.4f}{RESET} "
