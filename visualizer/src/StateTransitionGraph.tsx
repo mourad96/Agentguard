@@ -5,9 +5,14 @@ import {
   MarkerType,
   Handle,
   Position,
+  BaseEdge,
+  EdgeLabelRenderer,
+  getStraightPath,
+  getSmoothStepPath,
   type Node,
   type Edge,
   type NodeProps,
+  type EdgeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -35,20 +40,19 @@ const nodeStyle = (isActive: boolean) => ({
 const StateMachineNode = ({ data, selected }: NodeProps) => {
   return (
     <div style={nodeStyle(!!selected)}>
-      {/* Dynamic Handles for strictly vertically distinct lines */}
-      {/* Top Handles (both source and target) */}
+      {/* Top Handles */}
       <Handle type="target" position={Position.Top} id="top-center" style={{ left: '50%', background: 'transparent', border: 'none' }} />
-      <Handle type="target" position={Position.Top} id="top-left" style={{ left: '30%', background: 'transparent', border: 'none' }} />
-      <Handle type="target" position={Position.Top} id="top-right" style={{ left: '70%', background: 'transparent', border: 'none' }} />
-      <Handle type="source" position={Position.Top} id="source-top-right" style={{ left: '70%', background: 'transparent', border: 'none' }} />
-      
-      {/* Bottom Handles (both source and target) */}
-      <Handle type="source" position={Position.Bottom} id="bottom-center" style={{ left: '50%', background: 'transparent', border: 'none' }} />
-      <Handle type="source" position={Position.Bottom} id="bottom-left" style={{ left: '30%', background: 'transparent', border: 'none' }} />
-      <Handle type="source" position={Position.Bottom} id="bottom-right" style={{ left: '70%', background: 'transparent', border: 'none' }} />
-      <Handle type="target" position={Position.Bottom} id="target-bottom-right" style={{ left: '70%', background: 'transparent', border: 'none' }} />
+      <Handle type="target" position={Position.Top} id="top-left" style={{ left: '15%', background: 'transparent', border: 'none' }} />
+      <Handle type="target" position={Position.Top} id="top-right" style={{ left: '85%', background: 'transparent', border: 'none' }} />
+      <Handle type="source" position={Position.Top} id="source-top-right" style={{ left: '85%', background: 'transparent', border: 'none' }} />
 
-      {/* Side Handles for wrap-around paths */}
+      {/* Bottom Handles */}
+      <Handle type="source" position={Position.Bottom} id="bottom-center" style={{ left: '50%', background: 'transparent', border: 'none' }} />
+      <Handle type="source" position={Position.Bottom} id="bottom-left" style={{ left: '15%', background: 'transparent', border: 'none' }} />
+      <Handle type="source" position={Position.Bottom} id="bottom-right" style={{ left: '85%', background: 'transparent', border: 'none' }} />
+      <Handle type="target" position={Position.Bottom} id="target-bottom-right" style={{ left: '85%', background: 'transparent', border: 'none' }} />
+
+      {/* Side Handles */}
       <Handle type="source" position={Position.Left} id="left-source" style={{ top: '50%', background: 'transparent', border: 'none' }} />
       <Handle type="target" position={Position.Left} id="left-target" style={{ top: '50%', background: 'transparent', border: 'none' }} />
       <Handle type="source" position={Position.Right} id="right-source" style={{ top: '50%', background: 'transparent', border: 'none' }} />
@@ -65,18 +69,95 @@ const OriginNode = () => (
   </div>
 );
 
+// Custom edge that supports labelOffsetX / labelOffsetY via edge.data
+function OffsetEdge({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  data,
+  style,
+  markerEnd,
+  animated,
+}: EdgeProps) {
+  const edgeData = (data ?? {}) as Record<string, any>;
+  const edgeType: string = edgeData.edgeType ?? 'straight';
+  const labelOffsetX: number = edgeData.labelOffsetX ?? 0;
+  const labelOffsetY: number = edgeData.labelOffsetY ?? 0;
+  const labelText: string = edgeData.labelText ?? '';
+  const labelPos: number = edgeData.labelPosition ?? 0.5;
+
+  let edgePath = '';
+  let labelX = 0;
+  let labelY = 0;
+
+  if (edgeType === 'smoothstep') {
+    [edgePath, labelX, labelY] = getSmoothStepPath({
+      sourceX, sourceY, targetX, targetY,
+      sourcePosition, targetPosition,
+    });
+  } else {
+    [edgePath, labelX, labelY] = getStraightPath({ sourceX, sourceY, targetX, targetY });
+    // Override labelX/Y based on labelPos along straight path
+    labelX = sourceX + (targetX - sourceX) * labelPos;
+    labelY = sourceY + (targetY - sourceY) * labelPos;
+  }
+
+  // Apply offsets
+  const finalLabelX = labelX + labelOffsetX;
+  const finalLabelY = labelY + labelOffsetY;
+
+  const strokeStyle = {
+    stroke: "#6366f1",
+    strokeWidth: 4,
+    strokeDasharray: animated ? "6 3" : undefined,
+    ...style,
+  };
+
+  return (
+    <>
+      <BaseEdge id={id} path={edgePath} style={strokeStyle} markerEnd={markerEnd as string} />
+      {labelText && (
+        <EdgeLabelRenderer>
+          <div
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${finalLabelX}px, ${finalLabelY}px)`,
+              background: 'rgba(2, 6, 23, 0.92)',
+              color: '#cbd5e1',
+              fontSize: 22,
+              fontWeight: 700,
+              padding: '4px 10px',
+              borderRadius: 6,
+              pointerEvents: 'none',
+              whiteSpace: 'nowrap',
+              zIndex: 10,
+            }}
+            className="nodrag nopan"
+          >
+            {labelText}
+          </div>
+        </EdgeLabelRenderer>
+      )}
+    </>
+  );
+}
+
 const nodeTypes = {
   stateNode: StateMachineNode,
   originNode: OriginNode,
 };
 
+const edgeTypes = {
+  offsetEdge: OffsetEdge,
+};
+
 const defaultEdgeOptions = {
   animated: true,
   style: { stroke: "#6366f1", strokeWidth: 4 },
-  labelStyle: { fill: "#cbd5e1", fontWeight: 700, fontSize: 28 },
-  labelBgStyle: { fill: "#020617", fillOpacity: 0.9 },
-  labelBgPadding: [16, 12] as [number, number],
-  labelBgBorderRadius: 8,
   markerEnd: {
     type: MarkerType.ArrowClosed,
     color: "#6366f1",
@@ -87,7 +168,6 @@ export function StateTransitionGraph({ activeNode, nodes = [], edges = [] }: Pro
   const styledNodes = useMemo(() => nodes.map(node => ({
     ...node,
     selected: node.id === activeNode,
-    // Add type if not present based on data content
     type: node.id === 'O' ? 'originNode' : 'stateNode',
   })), [nodes, activeNode]);
 
@@ -97,8 +177,10 @@ export function StateTransitionGraph({ activeNode, nodes = [], edges = [] }: Pro
         nodes={styledNodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
         fitView
+        fitViewOptions={{ padding: 0.22 }}
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable={false}
