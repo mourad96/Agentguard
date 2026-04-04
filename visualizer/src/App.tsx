@@ -11,29 +11,33 @@ import {
 import "./App.css";
 
 export default function App() {
+  const [modelName, setModelName] = useState("Default Model");
   const [step, setStep] = useState(1);
   const [properties, setProperties] = useState<AGProperty[]>(INITIAL_PROPERTIES);
-  const [isSimulating, setIsSimulating] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(true);
   const [activeNode, setActiveNode] = useState("Opportunity_Spotted");
   const [stutterCount, setStutterCount] = useState(0);
   const [isHalted, setIsHalted] = useState(false);
 
   const [graphData, setGraphData] = useState<{ nodes: Node[], edges: Edge[] }>({ nodes: [], edges: [] });
 
-  const refreshModel = useCallback(async () => {
+  const refreshModel = useCallback(async (isInitial = false) => {
     try {
       const res = await fetch("/model.prism");
       if (!res.ok) throw new Error("Failed to fetch model.prism");
       const content = await res.text();
       const parsed = parsePrism(content);
       setGraphData(parsed);
+      if (!isInitial) {
+        setModelName("Failure Scenario");
+      }
     } catch (err) {
       console.error("Error refreshing model:", err);
     }
   }, []);
 
   useEffect(() => {
-    refreshModel();
+    refreshModel(true);
   }, [refreshModel]);
 
   useEffect(() => {
@@ -131,11 +135,11 @@ export default function App() {
         <div className="header__controls">
           <button 
             className="btn-simulate active"
-            onClick={refreshModel}
+            onClick={() => refreshModel(false)}
           >
             🔄 Refresh Diagram
           </button>
-          <span className="step-counter">Step: {step}</span>
+          <span className="step-counter">{modelName}</span>
         </div>
       </header>
 
