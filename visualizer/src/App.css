@@ -50,7 +50,7 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 540px 1fr;
+  grid-template-columns: 1fr 420px;
   gap: 1.5rem;
   align-items: stretch;
   z-index: 10;
@@ -68,7 +68,7 @@
 .panel {
   display: flex;
   flex-direction: column;
-  min-height: 540px;
+  min-height: 700px;
   background: rgba(20, 25, 35, 0.6);
   backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -113,8 +113,8 @@
 }
 
 .panel--graph {
-  min-height: 400px;
-  flex: 1;
+  min-height: 650px;
+  flex: 1.5;
 }
 
 /* Base styles for properties panel */
@@ -130,7 +130,7 @@
 .transition-graph .react-flow {
   width: 100%;
   height: 100%;
-  min-height: 500px;
+  min-height: 620px;
   background: transparent;
 }
 
