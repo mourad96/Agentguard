@@ -89,14 +89,14 @@ export function parsePrism(content: string): ParsedPrism {
     const s = sMatch ? parseInt(sMatch[1]) : 0;
     
     // Strict Layout Coordinates with wider spread to avoid label overlap
-    let x = 400;
+    let x = 500;
     let y = 0;
-    if (s === 4) { x = 400; y = 100; }
-    else if (s === 3) { x = 400; y = 300; }
-    else if (s === 2) { x = -100; y = 600; } // Increased Y for longer lines too
-    else if (s === 1) { x = 400; y = 600; }
-    else if (s === 0) { x = 900; y = 600; }
-    else { x = s * 150; y = 700; }
+    if (s === 4) { x = 500; y = 100; }
+    else if (s === 3) { x = 500; y = 450; }
+    else if (s === 2) { x = -250; y = 900; } 
+    else if (s === 1) { x = 500; y = 900; }
+    else if (s === 0) { x = 1250; y = 900; }
+    else { x = s * 250; y = 1000; }
 
     return { ...n, position: { x, y }, type: 'stateNode' };
   });
@@ -106,7 +106,7 @@ export function parsePrism(content: string): ParsedPrism {
     id: 'O',
     type: 'originNode',
     data: { label: '' },
-    position: { x: 495, y: 30 }, // Centered above S4 (S4 is at 400, width 200, so center 500. Node O is width 10, so 495)
+    position: { x: 595, y: 15 }, // Centered above S4 (S4 is at 500, width 200, so center 600. Node O is width 10, so 595)
   });
 
   // Add Origin Edge O -> S4

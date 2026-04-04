@@ -164,6 +164,22 @@ export default function App() {
       </header>
 
       <main className="app__main">
+          <div className="panel panel--graph" aria-label="Agent Architecture">
+            <div className="panel__head">
+              <h2 className="panel__title">Agent State Machine</h2>
+              <span className="panel__badge">Architecture Reference</span>
+            </div>
+            <div className="transition-graph">
+              <ReactFlowProvider>
+                <StateTransitionGraph 
+                  nodes={graphData.nodes}
+                  edges={graphData.edges}
+                  activeNode={activeNode} 
+                />
+              </ReactFlowProvider>
+            </div>
+          </div>
+
           <div className="panel panel--properties">
             <div className="panel__head">
               <h2 className="panel__title">AgentGuard Properties</h2>
@@ -195,22 +211,6 @@ export default function App() {
                   ))}
                 </tbody>
               </table>
-            </div>
-          </div>
-
-          <div className="panel panel--graph" aria-label="Agent Architecture">
-            <div className="panel__head">
-              <h2 className="panel__title">Agent State Machine</h2>
-              <span className="panel__badge">Architecture Reference</span>
-            </div>
-            <div className="transition-graph">
-              <ReactFlowProvider>
-                <StateTransitionGraph 
-                  nodes={graphData.nodes}
-                  edges={graphData.edges}
-                  activeNode={activeNode} 
-                />
-              </ReactFlowProvider>
             </div>
           </div>
       </main>
