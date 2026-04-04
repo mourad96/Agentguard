@@ -106,21 +106,7 @@ export function parsePrism(content: string): ParsedPrism {
           });
         }
 
-<<<<<<< HEAD
         rawEdges.push({ action, sourceS, sourceId, targetS, targetId, prob });
-=======
-        const edgeId = `e-${sourceId}-${targetId}-${action}-${idx}`;
-        edges.push({
-          id: edgeId,
-          source: sourceId,
-          target: targetId,
-          // Always show probability
-          label: `${action} (${parseFloat(prob).toFixed(4)})`,
-          animated: true,
-          type: 'smoothstep',
-          markerEnd: { type: MarkerType.ArrowClosed, color: "#6366f1" }
-        });
->>>>>>> 3105a2ce4127bf96af67103e14454b65acb55bff
       }
     });
   }
@@ -130,7 +116,6 @@ export function parsePrism(content: string): ParsedPrism {
     const label = n.data.label as string;
     const sMatch = label.match(/S(\d+):/);
     const s = sMatch ? parseInt(sMatch[1]) : 0;
-<<<<<<< HEAD
 
     let x = 500, y = 0;
     if (s === 4) { x = 600; y = 100; }
@@ -144,43 +129,23 @@ export function parsePrism(content: string): ParsedPrism {
   });
 
   // Add Origin Node
-=======
-    
-    // Strict Layout Coordinates with wider spread to avoid label overlap
-    let x = 400;
-    let y = 0;
-    if (s === 4) { x = 400; y = 100; }
-    else if (s === 3) { x = 400; y = 300; }
-    else if (s === 2) { x = -100; y = 600; } // Increased Y for longer lines too
-    else if (s === 1) { x = 400; y = 600; }
-    else if (s === 0) { x = 900; y = 600; }
-    else { x = s * 150; y = 700; }
-
-    return { ...n, position: { x, y }, type: 'stateNode' };
-  });
-
-  // Add Origin Node 'O'
->>>>>>> 3105a2ce4127bf96af67103e14454b65acb55bff
   nodes.push({
     id: 'O',
     type: 'originNode',
     data: { label: '' },
-<<<<<<< HEAD
     position: { x: 795, y: -20 }, // centered above S4 (S4 at x=600, width=400 → center=800, node width=10 → 795)
   });
 
   const finalEdges: Edge[] = [];
   const seenPairs = new Set<string>();
 
-  // Origin edge
+  // Origin edge — no label text, just the dot and arrow
   const opportunityId = nodes.find(n => n.id.includes('Opportunity'))?.id || 'Opportunity_Spotted';
-  finalEdges.push(makeEdge('e-O-S4', 'O', opportunityId, 'start (1.0000)', {
+  finalEdges.push(makeEdge('e-O-S4', 'O', opportunityId, '', {
     sourceHandle: 'bottom',
     targetHandle: 'top-center',
     edgeType: 'straight',
     animated: false,
-    labelPosition: 0.5,
-    labelOffsetX: 60,
   }));
 
   rawEdges.forEach(({ action, sourceId, targetId, prob }) => {
@@ -266,92 +231,6 @@ export function parsePrism(content: string): ParsedPrism {
       }
 
       seenPairs.add(pair);
-=======
-    position: { x: 495, y: 30 }, // Centered above S4 (S4 is at 400, width 200, so center 500. Node O is width 10, so 495)
-  });
-
-  // Add Origin Edge O -> S4
-  edges.push({
-    id: 'e-O-S4',
-    source: 'O',
-    target: nodes.find(n => n.id.includes('Opportunity'))?.id || 'Opportunity_Spotted',
-    sourceHandle: 'bottom',
-    targetHandle: 'top-center',
-    type: 'straight',
-    label: 'start (1.0000)',
-    animated: false,
-  });
-
-  // Filter and Style Edges
-  const finalEdges: Edge[] = [];
-  const seenPairs = new Set<string>();
-
-  edges.forEach(edge => {
-    // Skip the origin edge we just added to process it specially if needed, but it's already in the list if we use finalEdges
-    if (edge.id === 'e-O-S4') {
-        finalEdges.push(edge);
-        return;
-    }
-
-    const source = edge.source;
-    const target = edge.target;
-    const pair = `${source}->${target}`;
-    
-    // Consolidate: only take the first transition for a pair unless it's the S3 <-> S1 bi-directional
-    const isS3S1 = (source.includes('Construction') && target.includes('Revert'));
-    const isS1S3 = (source.includes('Revert') && target.includes('Construction'));
-
-    if (isS3S1) {
-        // Arrow 1: S3 -> S1 (center-bottom to center-top)
-        edge.sourceHandle = 'bottom-left';
-        edge.targetHandle = 'top-left';
-        edge.type = 'straight';
-        edge.labelPosition = 0.25; // Offset upwards to avoid overlap with return line
-        finalEdges.push(edge);
-    } else if (isS1S3) {
-        // Arrow 2: S1 -> S3 (center-top to center-bottom)
-        if (seenPairs.has(pair)) return; // Only one fetch_data arrow back
-        edge.sourceHandle = 'source-top-right';
-        edge.targetHandle = 'target-bottom-right';
-        edge.type = 'straight';
-        edge.labelPosition = 0.25; // Offset "upwards" relative to source S1, so it's towards the bottom of S3
-        finalEdges.push(edge);
-        seenPairs.add(pair);
-    } else {
-        if (seenPairs.has(pair)) return;
-        
-        // S3 -> S2, S3 -> S0
-        if (source.includes('Construction')) {
-            edge.type = 'straight';
-            if (target.includes('Confirmed')) {
-                edge.sourceHandle = 'bottom-left';
-                edge.targetHandle = 'top-center';
-            } else if (target.includes('Error')) {
-                edge.sourceHandle = 'bottom-right';
-                edge.targetHandle = 'top-center';
-            }
-        }
-        // S2 -> S4, S0 -> S4 (Returns)
-        else if (target.includes('Opportunity')) {
-            edge.type = 'smoothstep';
-            edge.animated = true;
-            if (source.includes('Confirmed')) {
-                edge.sourceHandle = 'left-source';
-                edge.targetHandle = 'left-target';
-            } else if (source.includes('Error')) {
-                edge.sourceHandle = 'right-source';
-                edge.targetHandle = 'right-target';
-            }
-        }
-        // S4 -> S3
-        else if (source.includes('Opportunity') && target.includes('Construction')) {
-            edge.type = 'straight';
-            edge.sourceHandle = 'bottom-center';
-            edge.targetHandle = 'top-center';
-        }
-        finalEdges.push(edge);
-        seenPairs.add(pair);
->>>>>>> 3105a2ce4127bf96af67103e14454b65acb55bff
     }
   });
 
