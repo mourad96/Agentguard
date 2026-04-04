@@ -39,6 +39,8 @@ log = logging.getLogger("demo")
 # Actuator callbacks
 # ----------------------------------------------------------------------
 
+_HALT_BOT = False
+
 def on_alert(result: ThresholdResult):
     print(
         f"\n  [!] ALERT: '{result.check.property_name}' = {result.check.value:.4f} "
@@ -46,13 +48,14 @@ def on_alert(result: ThresholdResult):
     )
 
 def on_intervene(result: ThresholdResult):
+    global _HALT_BOT
     print(
         f"\n  [X] INTERVENTION: '{result.check.property_name}' = {result.check.value:.4f} "
         f"critically breaches threshold {result.threshold}!"
         f"\n      -> HALTING LIQUIDATION BOT TO PREVENT GAS DRAIN.\n"
     )
-    # Physically halt the demo
-    sys.exit(1)
+    # Physically halt the demo main loop
+    _HALT_BOT = True
 
 # ----------------------------------------------------------------------
 # Simulated Liquidation Agent
@@ -127,6 +130,9 @@ def main() -> None:
 
     try:
         for i in range(max_steps):
+            if _HALT_BOT:
+                break
+            
             result = agent.step()
             if result is None:
                 print(f"\n  [v] Liquidation completed after {step_count} steps.")

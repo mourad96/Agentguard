@@ -22,4 +22,4 @@ COPY . .
 # Enable real Storm checker
 ENV AGENTGUARD_USE_STORM=1
 
-CMD ["python", "demo.py"]
+CMD ["python", "demo_liquidation.py"]

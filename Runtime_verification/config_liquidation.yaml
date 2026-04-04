@@ -20,6 +20,6 @@ actions:
   - "adjust_params"
 
 safety_thresholds:
-  min_prob_success: 0.20        # Kill if P(success) < 20%
+  min_prob_success: 0.80        # Kill if P(success) < 20%
   max_expected_cycles: 10.0     # Kill if expected cost > 10 gas units
   max_prob_missing_critical: 0.8  # Kill if P(never confirming) > 80%

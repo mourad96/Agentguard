@@ -47,6 +47,8 @@ class AnalyzerThread(threading.Thread):
         # Pre-register all config states so labels are always present in
         # the generated PRISM model, even before those states are visited.
         self._mdp.seed_states(config.states)
+        self._prism_output = config.verification.prism_output
+        self._mdp.load_from_prism(self._prism_output)
         self._converter = PRISMConverter(config)
         self._checker = create_checker(use_storm=config.verification.use_storm)
         self._actuator = Actuator(
@@ -57,7 +59,7 @@ class AnalyzerThread(threading.Thread):
 
         # Bookkeeping
         self._check_interval = config.verification.check_interval
-        self._prism_output = config.verification.prism_output
+        # prism_output is already on self._prism_output
         self._transitions_since_check = 0
         self._stop_event = threading.Event()
         self._latest_results: List[CheckResult] = []
