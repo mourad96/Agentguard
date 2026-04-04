@@ -50,7 +50,7 @@ class AgentGuardLogger:
             on_intervene=on_intervene,
         )
         self._analyzer.start()
-        logger.info("AgentGuardLogger initialised — analyzer thread running")
+        logger.info("AgentGuardLogger initialised -- analyzer thread running")
 
     # ── Public API ────────────────────────────────────────────────────
 
@@ -82,7 +82,7 @@ class AgentGuardLogger:
         Signal the analyzer to finish, wait for it to drain the queue,
         and print a final summary.
         """
-        logger.info("Shutdown requested — draining queue …")
+        logger.info("Shutdown requested -- draining queue ...")
         self._analyzer.request_stop()
         self._analyzer.join(timeout=timeout)
         if self._analyzer.is_alive():

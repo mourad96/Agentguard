@@ -108,7 +108,7 @@ class Actuator:
         )
 
     def _print_dashboard(self, evaluated: List[ThresholdResult]) -> None:
-        ICONS = {"ok": "✅", "warning": "⚠️ ", "critical": "🛑"}
+        ICONS = {"ok": "[OK]", "warning": "[!]", "critical": "[X]"}
         COLORS = {
             "ok": "\033[92m",       # green
             "warning": "\033[93m",  # yellow
@@ -119,9 +119,9 @@ class Actuator:
         DIM = "\033[2m"
 
         width = 78
-        print(f"\n{BOLD}{'═' * width}{RESET}")
-        print(f"{BOLD}  🛡️  AgentGuard — Assurance Dashboard{RESET}")
-        print(f"{BOLD}{'═' * width}{RESET}")
+        print(f"\n{BOLD}{'=' * width}{RESET}")
+        print(f"{BOLD}  AgentGuard -- Assurance Dashboard{RESET}")
+        print(f"{BOLD}{'=' * width}{RESET}")
 
         # Header row
         print(

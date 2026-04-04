@@ -1,10 +1,83 @@
+10:46:38  agentguard.checker        INFO     Using mock model checker
+10:46:38  agentguard.analyzer       INFO     AnalyzerThread started (interval=5)
+10:46:38  agentguard.logger         INFO     AgentGuardLogger initialised -- analyzer thread running
+10:46:40  agentguard.logger         INFO     Shutdown requested -- draining queue ...
+10:46:40  agentguard.analyzer       INFO     Running verification (total transitions: 4)
+10:46:40  agentguard.prism          INFO     PRISM model written to C:\Users\User\Documents\dev\agentguard_blockchain\Agentguard\Runtime_verification\latest_model.prism
+10:46:40  agentguard.analyzer       INFO     AnalyzerThread stopped
+10:46:40  agentguard.logger         INFO     AnalyzerThread stopped cleanly
 ============================================================
-Traceback (most recent call last):
-  File "C:\Users\User\Documents\dev\agentguard_blockchain\Agentguard\Runtime_verification\demo.py", line 193, in <module>
-    main()
-  File "C:\Users\User\Documents\dev\agentguard_blockchain\Agentguard\Runtime_verification\demo.py", line 135, in main
-    print("  \U0001f6e1\ufe0f  AgentGuard � Proof of Concept Demo")
-  File "C:\Users\User\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1252.py", line 19, in encode
-    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-UnicodeEncodeError: 'charmap' codec can't encode characters in position 2-3: character maps to <undefined>
+  AgentGuard -- Proof of Concept Demo
+============================================================
+
+  This demo simulates a Research Agent while AgentGuard
+  monitors every transition and verifies safety properties
+  in the background.
+
+  [ 1]  idle             --search-->  searching
+  [ 2]  searching        --summarize-->  summarizing
+  [ 3]  summarizing      --write-->  writing
+  [ 4]  writing          --finish-->  done
+
+  [v] Agent reached terminal state 'done' after 4 steps.
+
+  Shutting down AgentGuard ...
+
+──────────────────────────────────────────────────
+MDP Summary  (5 states, 4 actions, 4 transitions observed)
+  Initial state : idle
+  States        : done, idle, searching, summarizing, writing
+  Actions       : finish, search, summarize, write
+  (idle, search) → [searching: 1.00]
+  (searching, summarize) → [summarizing: 1.00]
+  (summarizing, write) → [writing: 1.00]
+  (writing, finish) → [done: 1.00]
+──────────────────────────────────────────────────
+
+[1m==============================================================================[0m
+[1m  AgentGuard -- Assurance Dashboard[0m
+[1m==============================================================================[0m
+  Property                          Value    Threshold    Dir   Status
+  ──────────────────────────────────────────────────────────────────────
+  Goal Reachability            [93m    0.5376[0m          0.7  above  [!]
+  Error Avoidance              [92m    0.0042[0m          0.3  below  [OK]
+  Expected Steps to Goal       [92m    6.3731[0m           10  below  [OK]
+[2m──────────────────────────────────────────────────────────────────────────────[0m
+
+
+  [!] ALERT: 'Goal Reachability' = 0.5376 (threshold: 0.7, dir: above)
+
+
+============================================================
+  [i] Generated PRISM model: C:\Users\User\Documents\dev\agentguard_blockchain\Agentguard\Runtime_verification\latest_model.prism
+============================================================
+// AgentGuard — auto-generated PRISM model
+mdp
+
+module agent
+  s : [0..4] init 0;
+
+  [search] s=0 -> 1.000000 : (s'=2);
+  [summarize] s=2 -> 1.000000 : (s'=3);
+  [write] s=3 -> 1.000000 : (s'=4);
+  [finish] s=4 -> 1.000000 : (s'=1);
+  [_stay] s=1 -> 1.000000 : (s'=1);
+
+endmodule
+
+// --- Labels ---
+label "goal" = s=1;
+label "did_finish" = s=1;
+label "did_search" = s=2;
+label "did_summarize" = s=3;
+label "did_write" = s=4;
+
+rewards "steps"
+  [search] s=0 : 1;
+  [summarize] s=2 : 1;
+  [write] s=3 : 1;
+  [finish] s=4 : 1;
+endrewards
+
+  [v] Demo complete.
+

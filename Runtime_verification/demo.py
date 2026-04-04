@@ -41,6 +41,12 @@ logging.basicConfig(
 log = logging.getLogger("demo")
 
 
+# ── Fix Windows Unicode issues ──────────────────────────────────────────
+if sys.platform == "win32":
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 # ──────────────────────────────────────────────────────────────────────
 # Actuator callbacks
 # ──────────────────────────────────────────────────────────────────────
@@ -48,7 +54,7 @@ log = logging.getLogger("demo")
 def on_alert(result: ThresholdResult):
     """Fires when a property breaches its threshold (warning level)."""
     print(
-        f"\n  ⚠️  ALERT: '{result.check.property_name}' = {result.check.value:.4f} "
+        f"\n  [!] ALERT: '{result.check.property_name}' = {result.check.value:.4f} "
         f"(threshold: {result.threshold}, dir: {result.direction})\n"
     )
 
@@ -56,9 +62,9 @@ def on_alert(result: ThresholdResult):
 def on_intervene(result: ThresholdResult):
     """Fires on critical breaches — could stop the agent in production."""
     print(
-        f"\n  🛑  INTERVENTION: '{result.check.property_name}' = {result.check.value:.4f} "
+        f"\n  [X] INTERVENTION: '{result.check.property_name}' = {result.check.value:.4f} "
         f"critically breaches threshold {result.threshold}!"
-        f"\n      → In production this would HALT the agent.\n"
+        f"\n      -> In production this would HALT the agent.\n"
     )
 
 
@@ -132,7 +138,7 @@ class ResearchAgent:
 
 def main() -> None:
     print("=" * 60)
-    print("  🛡️  AgentGuard — Proof of Concept Demo")
+    print("  AgentGuard -- Proof of Concept Demo")
     print("=" * 60)
     print()
     print("  This demo simulates a Research Agent while AgentGuard")
@@ -154,13 +160,13 @@ def main() -> None:
     for i in range(max_steps):
         result = agent.step()
         if result is None:
-            print(f"\n  🎉  Agent reached terminal state 'done' after {step_count} steps.")
+            print(f"\n  [v] Agent reached terminal state 'done' after {step_count} steps.")
             break
 
         from_state, action, to_state = result
         step_count += 1
 
-        print(f"  [{step_count:>2}]  {from_state:<15}  ──{action}──▶  {to_state}")
+        print(f"  [{step_count:>2}]  {from_state:<15}  --{action}-->  {to_state}")
 
         # Log the transition to AgentGuard (near-instant, non-blocking)
         guard.log_transition(from_state, action, to_state)
@@ -168,10 +174,10 @@ def main() -> None:
         # Simulate real work
         time.sleep(0.3)
     else:
-        print(f"\n  ⏹️  Max steps ({max_steps}) reached — agent did not finish.")
+        print(f"\n  [#] Max steps ({max_steps}) reached -- agent did not finish.")
 
     # ── Shutdown: flush queue and run final verification ──────────────
-    print("\n  Shutting down AgentGuard …")
+    print("\n  Shutting down AgentGuard ...")
     guard.shutdown(timeout=10.0)
 
     # ── Show the generated PRISM model ────────────────────────────────
@@ -181,12 +187,12 @@ def main() -> None:
     )
     if os.path.exists(prism_path):
         print(f"\n{'=' * 60}")
-        print(f"  📄  Generated PRISM model: {prism_path}")
+        print(f"  [i] Generated PRISM model: {prism_path}")
         print(f"{'=' * 60}")
-        with open(prism_path, "r") as f:
+        with open(prism_path, "r", encoding="utf-8") as f:
             print(f.read())
 
-    print("\n  ✅  Demo complete.\n")
+    print("\n  [v] Demo complete.\n")
 
 
 if __name__ == "__main__":
