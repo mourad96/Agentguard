@@ -3,8 +3,11 @@ import {
   Background,
   ReactFlow,
   MarkerType,
-  type Edge,
+  Handle,
+  Position,
   type Node,
+  type Edge,
+  type NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -26,14 +29,53 @@ const nodeStyle = (isActive: boolean) => ({
   textAlign: "center" as const,
   boxShadow: isActive ? "0 0 20px rgba(99, 102, 241, 0.5)" : "0 10px 15px -3px rgb(0 0 0 / 0.1)",
   transition: 'all 0.3s ease',
+  position: 'relative' as const,
 });
+
+const StateMachineNode = ({ data, selected }: NodeProps) => {
+  return (
+    <div style={nodeStyle(!!selected)}>
+      {/* Dynamic Handles for strictly vertically distinct lines */}
+      {/* Top Handles (both source and target) */}
+      <Handle type="target" position={Position.Top} id="top-center" style={{ left: '50%', background: 'transparent', border: 'none' }} />
+      <Handle type="target" position={Position.Top} id="top-left" style={{ left: '30%', background: 'transparent', border: 'none' }} />
+      <Handle type="target" position={Position.Top} id="top-right" style={{ left: '70%', background: 'transparent', border: 'none' }} />
+      <Handle type="source" position={Position.Top} id="source-top-right" style={{ left: '70%', background: 'transparent', border: 'none' }} />
+      
+      {/* Bottom Handles (both source and target) */}
+      <Handle type="source" position={Position.Bottom} id="bottom-center" style={{ left: '50%', background: 'transparent', border: 'none' }} />
+      <Handle type="source" position={Position.Bottom} id="bottom-left" style={{ left: '30%', background: 'transparent', border: 'none' }} />
+      <Handle type="source" position={Position.Bottom} id="bottom-right" style={{ left: '70%', background: 'transparent', border: 'none' }} />
+      <Handle type="target" position={Position.Bottom} id="target-bottom-right" style={{ left: '70%', background: 'transparent', border: 'none' }} />
+
+      {/* Side Handles for wrap-around paths */}
+      <Handle type="source" position={Position.Left} id="left-source" style={{ top: '50%', background: 'transparent', border: 'none' }} />
+      <Handle type="target" position={Position.Left} id="left-target" style={{ top: '50%', background: 'transparent', border: 'none' }} />
+      <Handle type="source" position={Position.Right} id="right-source" style={{ top: '50%', background: 'transparent', border: 'none' }} />
+      <Handle type="target" position={Position.Right} id="right-target" style={{ top: '50%', background: 'transparent', border: 'none' }} />
+
+      <div>{data.label as string}</div>
+    </div>
+  );
+};
+
+const OriginNode = () => (
+  <div style={{ width: 10, height: 10, background: '#6366f1', borderRadius: '50%', boxShadow: '0 0 10px #6366f1' }}>
+    <Handle type="source" position={Position.Bottom} id="bottom" style={{ background: 'transparent', border: 'none' }} />
+  </div>
+);
+
+const nodeTypes = {
+  stateNode: StateMachineNode,
+  originNode: OriginNode,
+};
 
 const defaultEdgeOptions = {
   animated: true,
-  style: { stroke: "#6366f1", strokeWidth: 2.5 },
-  labelStyle: { fill: "#cbd5e1", fontWeight: 700, fontSize: 11 },
+  style: { stroke: "#6366f1", strokeWidth: 3 },
+  labelStyle: { fill: "#cbd5e1", fontWeight: 700, fontSize: 15 },
   labelBgStyle: { fill: "#020617", fillOpacity: 0.9 },
-  labelBgPadding: [6, 4] as [number, number],
+  labelBgPadding: [8, 6] as [number, number],
   labelBgBorderRadius: 6,
   markerEnd: {
     type: MarkerType.ArrowClosed,
@@ -44,7 +86,9 @@ const defaultEdgeOptions = {
 export function StateTransitionGraph({ activeNode, nodes = [], edges = [] }: Props) {
   const styledNodes = useMemo(() => nodes.map(node => ({
     ...node,
-    style: nodeStyle(node.id === activeNode)
+    selected: node.id === activeNode,
+    // Add type if not present based on data content
+    type: node.id === 'O' ? 'originNode' : 'stateNode',
   })), [nodes, activeNode]);
 
   return (
@@ -52,6 +96,7 @@ export function StateTransitionGraph({ activeNode, nodes = [], edges = [] }: Pro
       <ReactFlow
         nodes={styledNodes}
         edges={edges}
+        nodeTypes={nodeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
         fitView
         nodesDraggable={false}
