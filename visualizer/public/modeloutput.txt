@@ -1,4 +1,1 @@
-Property,Value,Threshold,Status
-min_expected_cycles,16.5000,10.0,[X]
-max_prob_success,1.0000,0.8,[OK]
-prob_stuck_in_revert,0.0000,N/A,[OK]
+../../modeloutput.txt
