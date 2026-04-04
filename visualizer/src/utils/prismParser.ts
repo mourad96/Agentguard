@@ -72,7 +72,7 @@ export function parsePrism(content: string): ParsedPrism {
           id: edgeId,
           source: sourceId,
           target: targetId,
-          label: parseFloat(prob) < 1 ? `${action} (${parseFloat(prob).toFixed(2)})` : action,
+          label: parseFloat(prob) < 1 ? `${action} (${prob})` : action,
           animated: true,
           type: 'smoothstep',
           markerEnd: { type: MarkerType.ArrowClosed, color: "#6366f1" }
