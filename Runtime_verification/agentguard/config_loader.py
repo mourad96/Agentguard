@@ -169,6 +169,7 @@ def load_config(path: str | Path) -> AgentGuardConfig:
 
     seed_from_previous: bool = bool(raw.get("seed_from_previous", True))
     seed_weight: int = int(raw.get("seed_weight", 100))
+    prism_output: str = raw.get("prism_output", "latest_model.prism")
 
     return AgentGuardConfig(
         agent_name=agent_name,
@@ -179,4 +180,5 @@ def load_config(path: str | Path) -> AgentGuardConfig:
         thresholds=thresholds,
         seed_from_previous=seed_from_previous,
         seed_weight=seed_weight,
+        prism_output=prism_output,
     )

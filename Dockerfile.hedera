@@ -1,0 +1,50 @@
+# ──────────────────────────────────────────────────────────────────────
+# AgentGuard Hedera Agent — Docker Image
+# ──────────────────────────────────────────────────────────────────────
+# Same stormpy base as Runtime_verification, plus the Hedera SDK and
+# LangChain dependencies.  Real Storm verification runs natively.
+#
+# Build (from the Agentguard/ root):
+#   docker build -t agentguard-hedera -f Dockerfile.hedera .
+#
+# Run -- Command Prompt:
+#   docker run --rm --env-file AI_Agent/.env -v "%CD%\Runtime_verification:/app/Runtime_verification" agentguard-hedera
+#   docker run --rm --env-file AI_Agent/.env -v "%CD%\Runtime_verification:/app/Runtime_verification" agentguard-hedera liquidation
+#
+# Run -- PowerShell:
+#   docker run --rm --env-file AI_Agent/.env -v "${PWD}\Runtime_verification:/app/Runtime_verification" agentguard-hedera
+#   docker run --rm --env-file AI_Agent/.env -v "${PWD}\Runtime_verification:/app/Runtime_verification" agentguard-hedera liquidation
+#
+# Run -- Git Bash / MSYS:
+#   MSYS_NO_PATHCONV=1 docker run --rm --env-file AI_Agent/.env -v "${PWD}/Runtime_verification:/app/Runtime_verification" agentguard-hedera
+# ──────────────────────────────────────────────────────────────────────
+
+FROM movesrwth/stormpy:stable
+
+WORKDIR /app
+
+# Install deps (smaller layer first so it caches well)
+COPY Runtime_verification/requirements.txt ./Runtime_verification/requirements.txt
+RUN pip install --no-cache-dir -r Runtime_verification/requirements.txt
+
+# Step 1: install hedera-agent-kit and all other deps (langchain pins langgraph<1.1.0)
+COPY AI_Agent/requirements.txt ./AI_Agent/requirements.txt
+RUN pip install --no-cache-dir -r AI_Agent/requirements.txt
+
+# Step 2: force-upgrade langgraph without re-resolving deps (langgraph-prebuilt needs >=1.1.6
+# but langchain's declared constraint conflicts; --no-deps bypasses the resolver)
+RUN pip install --no-cache-dir --no-deps "langgraph>=1.1.6"
+
+# Copy both project directories
+COPY Runtime_verification/ ./Runtime_verification/
+COPY AI_Agent/ ./AI_Agent/
+
+RUN sed -i 's/\r//' /app/AI_Agent/entrypoint.sh && chmod +x /app/AI_Agent/entrypoint.sh
+
+# Enable real Storm checker (stormpy is already in the base image)
+ENV AGENTGUARD_USE_STORM=1
+
+WORKDIR /app/AI_Agent
+
+ENTRYPOINT ["/app/AI_Agent/entrypoint.sh"]
+CMD ["defi"]

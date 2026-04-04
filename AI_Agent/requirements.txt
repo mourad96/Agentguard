@@ -2,13 +2,16 @@
 # Core Hedera Agent Kit (pins langchain==1.2.10 and hiero-sdk-python==0.2.0 transitively)
 hedera-agent-kit==3.3.0
 
-# langgraph>=1.1.6 required: langgraph-prebuilt 1.0.9 imports ExecutionInfo from langgraph.runtime,
-# which is absent in langgraph 1.0.x despite being listed as a compatible version by langchain.
-langgraph>=1.1.6
-
 # Google Gemini LLM provider (langchain and langgraph versions resolved by hedera-agent-kit)
 langchain-google-genai>=2.1.4
 
 # Environment & config
 python-dotenv
 pyyaml>=6.0
+
+# NOTE: langgraph>=1.1.6 is required at runtime (langgraph-prebuilt 1.0.9 imports
+# ExecutionInfo from langgraph.runtime, absent in langgraph 1.0.x), but langchain==1.2.10
+# (pulled by hedera-agent-kit) constrains langgraph<1.1.0.  The conflict is resolved by
+# installing hedera-agent-kit first, then force-upgrading langgraph with --no-deps.
+# In Docker this is handled by the two-step RUN in Dockerfile.hedera.
+# For local installs: pip install -r requirements.txt && pip install "langgraph>=1.1.6" --no-deps

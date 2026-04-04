@@ -121,9 +121,9 @@ ROUND_PROMPTS = [
 
 
 async def main() -> None:
-    account_id_str = os.getenv("ACCOUNT_ID")
-    private_key_str = os.getenv("PRIVATE_KEY")
-    receiver = os.getenv("RECEIVER_ACCOUNT_ID", "0.0.4815862")
+    account_id_str = (os.getenv("ACCOUNT_ID") or "").strip().strip('"\'')
+    private_key_str = (os.getenv("PRIVATE_KEY") or "").strip().strip('"\'')
+    receiver = os.getenv("RECEIVER_ACCOUNT_ID", "0.0.4815862").strip().strip('"\'')
 
     if not account_id_str or not private_key_str:
         sys.exit("ERROR: Set ACCOUNT_ID and PRIVATE_KEY in your .env file.")
@@ -177,7 +177,7 @@ async def main() -> None:
     print(f"  Verification interval: every 3 transitions\n")
 
     # ── LangChain agent ──────────────────────────────────────────────
-    gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    gemini_key = (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "").strip().strip('"\'') or None
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",
         google_api_key=gemini_key,
