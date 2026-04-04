@@ -50,17 +50,10 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 540px 1fr;
   gap: 1.5rem;
   align-items: stretch;
   z-index: 10;
-}
-
-.left-pane, .right-pane {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  min-height: 0;
 }
 
 @media (max-width: 1024px) {
@@ -68,6 +61,8 @@
     grid-template-columns: 1fr;
   }
 }
+
+
 
 
 .panel {
@@ -139,54 +134,11 @@
   background: transparent;
 }
 
-.panel--charts {
-  min-height: 580px;
-}
-
-.metrics-charts {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  padding: 1.25rem;
-  min-height: 0;
-  overflow: auto;
-}
-
-.chart-card {
-  flex: 1;
-  min-height: 230px;
-  display: flex;
-  flex-direction: column;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 12px;
-  padding: 1rem 1.25rem 1.25rem;
-}
-
-.chart-card__title {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #f1f5f9;
-}
-
-.chart-card__hint {
-  margin: 0.25rem 0 1rem;
-  font-size: 0.8rem;
-  color: #64748b;
-  line-height: 1.4;
-}
-
-.chart-card__plot {
-  flex: 1;
-  min-height: 200px;
-}
 
 /* Dashboard Additions */
 
 .table-container {
-  padding: 1rem;
+  padding: 0.5rem;
   overflow-x: auto;
 }
 
@@ -200,17 +152,8 @@
   overflow: hidden;
 }
 
-.props-table th {
-  text-align: left;
-  padding: 0.75rem;
-  color: #94a3b8;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-  background: rgba(0,0,0,0.2);
-  font-weight: 600;
-}
-
-.props-table td {
-  padding: 0.75rem;
+.props-table th, .props-table td {
+  padding: 0.5rem 0.75rem;
   border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
@@ -218,6 +161,7 @@
   font-family: monospace;
   color: #a5b4fc;
   font-weight: bold;
+  white-space: nowrap;
 }
 
 .row-violated {
@@ -235,21 +179,7 @@
   font-weight: 700;
 }
 
-.override-input {
-  width: 80px;
-  background: rgba(0,0,0,0.3);
-  border: 1px solid rgba(255,255,255,0.2);
-  color: white;
-  border-radius: 6px;
-  padding: 0.35rem 0.5rem;
-  font-family: inherit;
-  transition: border-color 0.2s;
-}
 
-.override-input:focus {
-  outline: none;
-  border-color: #6366f1;
-}
 
 .header__controls {
   display: flex;

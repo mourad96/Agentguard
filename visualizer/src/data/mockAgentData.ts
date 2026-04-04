@@ -17,12 +17,6 @@ export type TransitionRecord = {
   labelStr?: string;
 };
 
-export type MetricPoint = {
-  step: number;
-  min_expected_cycles: number;
-  max_prob_success: number;
-  prob_missing_critical_action: number;
-};
 
 export type AGProperty = {
   name: string;
@@ -66,6 +60,3 @@ export const mockTransitions: TransitionRecord[] = [
   { from: "TX_Confirmed", action: "finalize", to: "Opportunity_Spotted", probability: 1.00, labelStr: "1.00 (Loop)" },
 ];
 
-export const initialMetrics: MetricPoint[] = [
-  { step: 1, min_expected_cycles: 2.5, max_prob_success: 0.746, prob_missing_critical_action: 0.0 },
-];
