@@ -1,0 +1,8 @@
+# AgentGuard — Runtime Verification POC
+# Core dependencies
+pyyaml>=6.0
+
+# Optional: Real model checker (requires Storm C++ library)
+# Uncomment the line below if running inside the Docker container
+# with Storm pre-installed.
+# stormpy>=1.8.0

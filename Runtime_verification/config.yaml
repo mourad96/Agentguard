@@ -1,0 +1,63 @@
+# ──────────────────────────────────────────────────────────────────────
+# AgentGuard — Configuration File
+# ──────────────────────────────────────────────────────────────────────
+# This file defines the agent's semantic states, available actions,
+# PCTL properties to verify, and verification engine settings.
+# Modify this file to adapt AgentGuard to *any* agent scenario without
+# touching the agent's source code.
+# ──────────────────────────────────────────────────────────────────────
+
+agentguard:
+
+  # ── Semantic States ───────────────────────────────────────────────
+  states:
+    - name: "idle"
+      is_initial: true
+    - name: "searching"
+    - name: "summarizing"
+    - name: "writing"
+    - name: "done"
+      is_goal: true
+    - name: "error"
+      is_error: true
+
+  # ── Actions ───────────────────────────────────────────────────────
+  actions:
+    - "search"
+    - "summarize"
+    - "write"
+    - "finish"
+    - "fail"
+    - "retry"
+
+  # ── PCTL Properties ──────────────────────────────────────────────
+  # Each property is verified every `check_interval` transitions.
+  # `direction` specifies whether the computed value must be "above"
+  # or "below" the threshold to be considered safe.
+  properties:
+    - name: "Goal Reachability"
+      pctl: 'Pmax=? [F "goal"]'
+      threshold: 0.7
+      direction: "above"       # P(reach goal) should be HIGH
+
+    - name: "Error Avoidance"
+      pctl: 'Pmax=? [F "error"]'
+      threshold: 0.3
+      direction: "below"       # P(reach error) should be LOW
+
+    - name: "Expected Steps to Goal"
+      pctl: 'Rmin=? [F "goal"]'
+      threshold: 10
+      direction: "below"       # fewer steps = better
+
+  # ── Verification Engine Settings ──────────────────────────────────
+  verification:
+    check_interval: 5          # run verification every N transitions
+    use_storm: false           # false = mock checker (no C++ dep)
+    prism_output: "latest_model.prism"
+
+  # ── Reward Structure ──────────────────────────────────────────────
+  rewards:
+    - name: "steps"
+      type: "transition"
+      value: 1                 # every transition costs 1 step

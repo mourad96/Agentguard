@@ -1,0 +1,34 @@
+// AgentGuard — auto-generated PRISM model
+mdp
+
+module agent
+  s : [0..5] init 0;
+
+  [search] s=0 -> 1.000000 : (s'=3);
+  [retry] s=2 -> 1.000000 : (s'=0);
+  [fail] s=3 -> 1.000000 : (s'=2);
+  [summarize] s=3 -> 1.000000 : (s'=4);
+  [write] s=4 -> 1.000000 : (s'=5);
+  [finish] s=5 -> 1.000000 : (s'=1);
+  [_stay] s=1 -> 1.000000 : (s'=1);
+
+endmodule
+
+// --- Labels ---
+label "goal" = s=1;
+label "error" = s=2;
+label "did_fail" = s=2;
+label "did_finish" = s=1;
+label "did_retry" = s=0;
+label "did_search" = s=3;
+label "did_summarize" = s=4;
+label "did_write" = s=5;
+
+rewards "steps"
+  [search] s=0 : 1;
+  [retry] s=2 : 1;
+  [fail] s=3 : 1;
+  [summarize] s=3 : 1;
+  [write] s=4 : 1;
+  [finish] s=5 : 1;
+endrewards
