@@ -66,7 +66,11 @@ class MDPModel:
         id_to_name = {}
         for match in re.finditer(r'label "([^"]+)" = s=(\d+);', content):
             name, sid = match.groups()
-            id_to_name[int(sid)] = name
+            sid = int(sid)
+            # State labels are defined first. Don't overwrite state names
+            # with single-state action labels that appear later in the file.
+            if sid not in id_to_name:
+                id_to_name[sid] = name
             
         # Parse transitions [action] s=from -> prob:(s'=to) + ...
         # Example: [submit_tx] s=3 -> 0.1250:(s'=0) + 0.7500:(s'=1) + 0.1250:(s'=2);

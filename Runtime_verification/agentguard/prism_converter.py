@@ -155,6 +155,10 @@ class PRISMConverter:
             action_sources[safe].add(state_map[from_state])
 
         for action_name, src_ids in sorted(action_sources.items()):
+            # Prevent PRISM parsing errors (Duplicate label) if an action shares a name with a state
+            if action_name in state_map:
+                logger.warning("Action label '%s' skipped because it matches a state name.", action_name)
+                continue
             expr = " | ".join(f"s={sid}" for sid in sorted(src_ids))
             lines.append(f'label "{action_name}" = {expr};')
 
