@@ -120,28 +120,45 @@ export function StateTransitionGraph({ transitions, activeNode, isHalted, isStut
     setNodes((nds) =>
       nds.map((n) => {
         let isActive = n.id === activeNode;
-        let isSuccess = n.id === "TX_Confirmed";
+        // States Mapping:
+        // s0: Network_Error (Red)
+        // s1: On_Chain_Revert (Orange)
+        // s2: TX_Confirmed (Green)
+        // s3: TX_Construction (Blue)
+        // s4: Opportunity_Spotted (Cyan/Purple)
+        
+        let nodeColor = "rgba(20, 25, 35, 0.85)";
+        let borderColor = "rgba(255, 255, 255, 0.1)";
+        let shadowColor = "rgba(0, 0, 0, 0.3)";
+
+        if (n.id === "TX_Confirmed") {
+          borderColor = isActive ? "#10b981" : "rgba(16, 185, 129, 0.3)";
+          if (isActive) shadowColor = "rgba(16, 185, 129, 0.6)";
+        } else if (n.id === "On_Chain_Revert") {
+          borderColor = isActive ? "#f59e0b" : "rgba(245, 158, 11, 0.3)";
+          if (isActive) shadowColor = "rgba(245, 158, 11, 0.6)";
+        } else if (n.id === "Network_Error") {
+          borderColor = isActive ? "#ef4444" : "rgba(239, 68, 68, 0.3)";
+          if (isActive) shadowColor = "rgba(239, 68, 68, 0.6)";
+        } else if (n.id === "TX_Construction") {
+          borderColor = isActive ? "#3b82f6" : "rgba(59, 130, 246, 0.3)";
+          if (isActive) shadowColor = "rgba(59, 130, 246, 0.6)";
+        } else if (n.id === "Opportunity_Spotted") {
+          borderColor = isActive ? "#8b5cf6" : "rgba(139, 92, 246, 0.3)";
+          if (isActive) shadowColor = "rgba(139, 92, 246, 0.6)";
+        }
+
         let isStutterTarget = isStuttering && (n.id === "TX_Construction" || n.id === "On_Chain_Revert");
-        let isHaltedNode = isHalted && n.id === "TX_Construction";
+        let isHaltedNode = isHalted && (n.id === "TX_Construction" || n.id === "On_Chain_Revert");
 
-        let border = "1px solid rgba(255, 255, 255, 0.1)";
-        let boxShadow = "0 8px 32px 0 rgba(0, 0, 0, 0.3)";
-        let background = "rgba(20, 25, 35, 0.85)";
-
-        if (isSuccess && isActive) {
-          border = "2px solid #10b981"; // Emerald Green
-          boxShadow = "0 0 24px 6px rgba(16, 185, 129, 0.6)"; // Pulse
-        } else if (isStutterTarget) {
-          border = "2px solid #dc2626"; // Crimson Red
-          boxShadow = "0 0 20px 4px rgba(220, 38, 38, 0.6)"; // Flashing effect
-        } else if (isActive) {
-          border = "2px solid #ec4899";
-          boxShadow = "0 0 20px 4px rgba(236, 72, 153, 0.6)";
+        if (isStutterTarget) {
+          borderColor = "#dc2626";
+          shadowColor = "rgba(220, 38, 38, 0.8)";
         }
 
         if (isHaltedNode) {
-          border = "2px solid #ef4444";
-          boxShadow = "0 0 30px 10px rgba(239, 68, 68, 0.8)";
+          borderColor = "#ef4444";
+          shadowColor = "rgba(239, 68, 68, 0.9)";
         }
 
         return {
@@ -152,23 +169,26 @@ export function StateTransitionGraph({ transitions, activeNode, isHalted, isStut
                 {isHaltedNode && (
                   <div 
                     style={{ 
-                      position: 'absolute', top: -30, left: '50%', transform: 'translateX(-50%)', 
-                      background: '#ef4444', color: '#fff', padding: '4px 8px', borderRadius: 4, 
-                      fontSize: 10, fontWeight: 'bold', whiteSpace: 'nowrap', zIndex: 10
+                      position: 'absolute', top: -35, left: '50%', transform: 'translateX(-50%)', 
+                      background: '#ef4444', color: '#fff', padding: '4px 10px', borderRadius: 4, 
+                      fontSize: 10, fontWeight: 'bold', whiteSpace: 'nowrap', zIndex: 10,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.5)', border: '1px solid #fff'
                     }}
                   >
                     HALTED BY AGENTGUARD
                   </div>
                 )}
+                <div style={{ fontSize: '10px', opacity: 0.7, marginBottom: '2px' }}>{n.id}</div>
                 {n.id.replace(/_/g, ' ')}
               </div>
             )
           },
           style: {
             ...n.style,
-            boxShadow,
-            border,
-            background,
+            boxShadow: `0 8px 32px 0 ${shadowColor}`,
+            border: isActive || isStutterTarget || isHaltedNode ? `2px solid ${borderColor}` : `1px solid ${borderColor}`,
+            background: nodeColor,
+            transform: isActive ? 'scale(1.05)' : 'scale(1)',
           },
         };
       })
@@ -183,13 +203,15 @@ export function StateTransitionGraph({ transitions, activeNode, isHalted, isStut
         if (isStutterEdge) {
           return {
             ...e,
-            style: { stroke: "#dc2626", strokeWidth: 3 },
+            animated: true,
+            style: { stroke: "#dc2626", strokeWidth: 4, strokeDasharray: '5,5' },
             markerEnd: { type: MarkerType.ArrowClosed, color: "#dc2626" },
           };
         }
         
         return {
           ...e,
+          animated: true,
           style: { stroke: "#6366f1", strokeWidth: 2 },
           markerEnd: { type: MarkerType.ArrowClosed, color: "#6366f1" },
         };

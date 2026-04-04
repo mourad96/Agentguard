@@ -22,14 +22,10 @@ export default function App() {
   const [isHalted, setIsHalted] = useState(false);
 
   useEffect(() => {
-    const hasViolation = properties.some(p => p.status === "[VIOLATED]") || 
-                         properties.some(p => (p.name === "max_prob_success" && p.value < p.threshold) || 
-                                              (p.name === "min_expected_cycles" && p.value > p.threshold));
+    const hasViolation = properties.some(p => p.status === "[VIOLATED]") || isHalted;
     if (hasViolation && isSimulating) {
       setIsHalted(true);
       setIsSimulating(false);
-    } else if (!hasViolation && isHalted) {
-      setIsHalted(false);
     }
   }, [properties, isSimulating, isHalted]);
 
@@ -53,21 +49,23 @@ export default function App() {
         setStep(s => {
           const nextStep = s + 1;
           
-          if (nextStep % 5 === 0) {
+          if (nextStep % 3 === 0) {
             setProperties(prev => {
               const newProps = [...prev];
               
               const probIndex = newProps.findIndex(p => p.name === "max_prob_success");
               if (probIndex !== -1) {
-                let newVal = newProps[probIndex].value - (0.02 + 0.05 * Math.random());
-                if (newVal < 0) newVal = 0;
+                // Diminish Pmax as stutterCount increases
+                // Base 0.746 (prob of s2 before s0)
+                let newVal = 0.746 * Math.pow(0.85, stutterCount);
                 newProps[probIndex].value = newVal;
                 newProps[probIndex].status = newVal >= newProps[probIndex].threshold ? "[OK]" : "[VIOLATED]";
               }
 
               const cyclesIndex = newProps.findIndex(p => p.name === "min_expected_cycles");
               if (cyclesIndex !== -1) {
-                let newVal = newProps[cyclesIndex].value + (2 + 5 * Math.random());
+                // Increase Rmin as stutterCount increases (simulating gas/time cost)
+                let newVal = 2.5 + (stutterCount * 4) + (Math.random() * 2);
                 newProps[cyclesIndex].value = newVal;
                 newProps[cyclesIndex].status = newVal <= newProps[cyclesIndex].threshold ? "[OK]" : "[VIOLATED]";
               }
@@ -102,9 +100,17 @@ export default function App() {
               }
             }
 
+            // Stutter Logic: s3 <-> s1
             if (curr === "TX_Construction" && next === "On_Chain_Revert") {
-              setStutterCount(c => c + 1);
-            } else if (curr === "TX_Construction" && next !== "On_Chain_Revert") {
+              setStutterCount(c => {
+                const newVal = c + 1;
+                if (newVal > 2) {
+                  setIsHalted(true); // Fire actuator event (visual)
+                }
+                return newVal;
+              });
+            } else if (next === "TX_Confirmed" || next === "Network_Error") {
+              // Reset stutter if we break the loop towards a terminal state (in this cycle)
               setStutterCount(0);
             }
 
@@ -113,10 +119,10 @@ export default function App() {
 
           return nextStep;
         });
-      }, 600); 
+      }, 700); 
     }
     return () => clearInterval(interval);
-  }, [isSimulating]);
+  }, [isSimulating, stutterCount]);
 
   return (
     <div className="app">

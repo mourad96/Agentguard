@@ -1,5 +1,12 @@
 /**
  * Mock data and types for AgentGuard Dashboard.
+ * 
+ * Based on PRISM model: Transaction Execution Flow
+ * s4: Opportunity_Spotted (Start)
+ * s3: TX_Construction (Processing)
+ * s1: On_Chain_Revert (Failure/Retry)
+ * s0: Network_Error (Error/Reset)
+ * s2: TX_Confirmed (Goal)
  */
 
 export type TransitionRecord = {
@@ -28,15 +35,15 @@ export type AGProperty = {
 export const INITIAL_PROPERTIES: AGProperty[] = [
   {
     name: "min_expected_cycles",
-    value: 2.0000,
-    threshold: 50.0,
+    value: 2.5000,
+    threshold: 12.0,
     direction: "below",
     status: "[OK]"
   },
   {
     name: "max_prob_success",
-    value: 1.0000,
-    threshold: 0.2,
+    value: 0.7460, // Approx prob of s2 before s0 in stable loop
+    threshold: 0.1,
     direction: "above",
     status: "[OK]"
   },
@@ -50,14 +57,15 @@ export const INITIAL_PROPERTIES: AGProperty[] = [
 ];
 
 export const mockTransitions: TransitionRecord[] = [
-  { from: "Opportunity_Spotted", action: "start", to: "TX_Construction", probability: 1.0, labelStr: "100% Success" },
-  { from: "TX_Construction", action: "confirm", to: "TX_Confirmed", probability: 0.2, labelStr: "20% Success" },
-  { from: "TX_Construction", action: "network_err", to: "Network_Error", probability: 0.3, labelStr: "30% NetworkErr" },
-  { from: "TX_Construction", action: "revert", to: "On_Chain_Revert", probability: 0.5, labelStr: "50% Revert" },
-  { from: "On_Chain_Revert", action: "retry", to: "TX_Construction", probability: 1.0, labelStr: "Retry" },
-  { from: "Network_Error", action: "reset", to: "Opportunity_Spotted", probability: 1.0, labelStr: "Reset" },
+  { from: "Opportunity_Spotted", action: "start", to: "TX_Construction", probability: 1.0, labelStr: "1.00" },
+  { from: "TX_Construction", action: "submit_tx", to: "TX_Confirmed", probability: 0.50, labelStr: "0.50 (Success)" },
+  { from: "TX_Construction", action: "submit_tx", to: "On_Chain_Revert", probability: 0.33, labelStr: "0.33 (Revert)" },
+  { from: "TX_Construction", action: "submit_tx", to: "Network_Error", probability: 0.17, labelStr: "0.17 (Error)" },
+  { from: "On_Chain_Revert", action: "retry", to: "TX_Construction", probability: 1.00, labelStr: "1.00 (Retry)" },
+  { from: "Network_Error", action: "reset", to: "Opportunity_Spotted", probability: 1.00, labelStr: "1.00 (Reset)" },
+  { from: "TX_Confirmed", action: "finalize", to: "Opportunity_Spotted", probability: 1.00, labelStr: "1.00 (Loop)" },
 ];
 
 export const initialMetrics: MetricPoint[] = [
-  { step: 1, min_expected_cycles: 2.0, max_prob_success: 1.0, prob_missing_critical_action: 0.0 },
+  { step: 1, min_expected_cycles: 2.5, max_prob_success: 0.746, prob_missing_critical_action: 0.0 },
 ];
