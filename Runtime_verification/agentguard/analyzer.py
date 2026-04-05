@@ -8,8 +8,10 @@ the shared queue and periodically triggering formal verification.
 from __future__ import annotations
 
 import logging
+import os
 import queue
 import threading
+from pathlib import Path
 from typing import Callable, List, Optional
 
 from agentguard.config_loader import AgentGuardConfig
@@ -66,6 +68,7 @@ class AnalyzerThread(threading.Thread):
         self._transitions_since_check = 0
         self._stop_event = threading.Event()
         self._latest_results: List[CheckResult] = []
+        self._latest_evaluated: List[ThresholdResult] = []
 
     # ── Thread lifecycle ──────────────────────────────────────────────
 
@@ -137,7 +140,35 @@ class AnalyzerThread(threading.Thread):
         self._latest_results = self._checker.check(prism_model, prop_dicts)
 
         # 4. Send results to actuator (dashboard + callbacks)
-        self._actuator.process(self._latest_results)
+        self._latest_evaluated = self._actuator.process(self._latest_results)
+
+        # 5. Write dashboard report to disk
+        self._write_report()
+
+    def _write_report(self) -> None:
+        """Write the latest dashboard values to a text file next to the PRISM model."""
+        if not self._latest_evaluated:
+            return
+        report_path = Path(self._prism_output).with_name("dashboard_report.txt")
+        icons = {"ok": "[OK]", "warning": "[!]", "critical": "[X]"}
+        lines = [
+            "=" * 78,
+            "  AgentGuard -- Assurance Dashboard",
+            "=" * 78,
+            f"  {'Property':<28} {'Value':>10} {'Threshold':>12} {'Dir':>6} {'Status':>8}",
+            "  " + "-" * 70,
+        ]
+        for tr in self._latest_evaluated:
+            icon = icons.get(tr.severity, "[?]")
+            thresh_str = f"{tr.threshold}" if tr.threshold is not None else "  N/A"
+            dir_str = tr.direction if tr.threshold is not None else "  N/A"
+            lines.append(
+                f"  {tr.check.property_name:<28} "
+                f"{tr.check.value:>10.4f} "
+                f"{thresh_str:>12} {dir_str:>6}  {icon}"
+            )
+        lines.append("-" * 78)
+        report_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     # ── Accessors ─────────────────────────────────────────────────────
 
@@ -148,3 +179,7 @@ class AnalyzerThread(threading.Thread):
     @property
     def latest_results(self) -> List[CheckResult]:
         return list(self._latest_results)
+
+    @property
+    def latest_evaluated(self) -> List[ThresholdResult]:
+        return list(self._latest_evaluated)
