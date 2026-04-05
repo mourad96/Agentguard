@@ -20,6 +20,17 @@ export default function App() {
 
   const [graphData, setGraphData] = useState<{ nodes: Node[], edges: Edge[] }>({ nodes: [], edges: [] });
 
+  const loadGraph = useCallback(async () => {
+    try {
+      const res = await fetch("/model.prism?" + Date.now());
+      if (!res.ok) throw new Error("Failed to fetch model.prism");
+      const content = await res.text();
+      setGraphData(parsePrism(content));
+    } catch (err) {
+      console.error("Error loading model.prism:", err);
+    }
+  }, []);
+
   const refreshModel = useCallback(async () => {
     try {
       // 1. Refresh Graph
@@ -44,17 +55,14 @@ export default function App() {
           
           let status: "[OK]" | "[X]" = "[OK]";
           if (property === "min_expected_cycles") {
-              // Rule from User: OK if Threshold >= Value
               if (!isNaN(thresholdVal)) {
                   status = thresholdVal >= value ? "[OK]" : "[X]";
               }
           } else if (property === "max_prob_success") {
-              // Rule from User: OK if Threshold <= Value
               if (!isNaN(thresholdVal)) {
                   status = thresholdVal <= value ? "[OK]" : "[X]";
               }
           } else if (property === "prob_stuck_in_revert") {
-              // Rule from User: OK if Threshold >= Value
               if (thresholdStr === "N/A") {
                   status = "[OK]";
               } else if (!isNaN(thresholdVal)) {
@@ -74,20 +82,17 @@ export default function App() {
 
       // 3. Update Model Name and Status
       const hasFailure = parsedProps.some(p => p.status === "[X]");
-      if (hasFailure) {
-        setModelName("Failure Scenario");
-      } else {
-        setModelName("Default Model");
-      }
+      setModelName(hasFailure ? "Failure Scenario" : "Default Model");
 
     } catch (err) {
       console.error("Error refreshing model:", err);
     }
   }, []);
 
+  // On mount: load graph nodes only; properties stay empty until Refresh is clicked
   useEffect(() => {
-    refreshModel();
-  }, [refreshModel]);
+    loadGraph();
+  }, [loadGraph]);
 
   useEffect(() => {
     const hasViolation = properties.some(p => p.status === "[X]") || isHalted;

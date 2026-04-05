@@ -1,1 +1,4 @@
-../../modeloutput.txt
+Property,Value,Threshold,Status
+min_expected_cycles,8,10.0,[X]
+max_prob_success,0.900,0.8,[OK]
+prob_stuck_in_revert,0.0000,N/A,[OK]
