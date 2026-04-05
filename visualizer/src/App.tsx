@@ -22,62 +22,46 @@ export default function App() {
 
   const loadGraph = useCallback(async () => {
     try {
-      const res = await fetch("/model.prism?" + Date.now());
-      if (!res.ok) throw new Error("Failed to fetch model.prism");
+      const res = await fetch("/latest_model.prism?" + Date.now());
+      if (!res.ok) throw new Error("Failed to fetch latest_model.prism");
       const content = await res.text();
       setGraphData(parsePrism(content));
     } catch (err) {
-      console.error("Error loading model.prism:", err);
+      console.error("Error loading latest_model.prism:", err);
     }
   }, []);
 
   const refreshModel = useCallback(async () => {
     try {
       // 1. Refresh Graph
-      const res = await fetch("/model.prism?" + Date.now());
-      if (!res.ok) throw new Error("Failed to fetch model.prism");
+      const res = await fetch("/latest_model.prism?" + Date.now());
+      if (!res.ok) throw new Error("Failed to fetch latest_model.prism");
       const content = await res.text();
-      const parsed = parsePrism(content);
-      setGraphData(parsed);
+      setGraphData(parsePrism(content));
 
-      // 2. Fetch and Parse Metrics from modeloutput.txt
-      const resMetrics = await fetch("/modeloutput.txt?" + Date.now());
-      if (!resMetrics.ok) throw new Error("Failed to fetch modeloutput.txt");
-      const csvContent = await resMetrics.text();
-      
-      const rows = csvContent.trim().split("\n");
-      const parsedProps = rows.slice(1).map(row => {
-          const parts = row.split(",");
-          const property = parts[0];
-          const value = parseFloat(parts[1]);
-          const thresholdStr = parts[2];
-          const thresholdVal = thresholdStr === "N/A" ? NaN : parseFloat(thresholdStr);
-          
-          let status: "[OK]" | "[X]" = "[OK]";
-          if (property === "min_expected_cycles") {
-              if (!isNaN(thresholdVal)) {
-                  status = thresholdVal >= value ? "[OK]" : "[X]";
-              }
-          } else if (property === "max_prob_success") {
-              if (!isNaN(thresholdVal)) {
-                  status = thresholdVal <= value ? "[OK]" : "[X]";
-              }
-          } else if (property === "prob_stuck_in_revert") {
-              if (thresholdStr === "N/A") {
-                  status = "[OK]";
-              } else if (!isNaN(thresholdVal)) {
-                  status = thresholdVal >= value ? "[OK]" : "[X]";
-              }
-          }
-          
+      // 2. Fetch and Parse Metrics from dashboard_report.txt
+      // Format: "  property_name    value    threshold    dir   [OK]/[!]"
+      const resMetrics = await fetch("/dashboard_report.txt?" + Date.now());
+      if (!resMetrics.ok) throw new Error("Failed to fetch dashboard_report.txt");
+      const reportContent = await resMetrics.text();
+
+      // Data rows start with two spaces and a lowercase letter, skip header/separator lines
+      const dataRowRegex = /^\s{2}([a-z_]+)\s+([\d.]+)\s+([\d.]+|N\/A)\s+\S+\s+(\[OK\]|\[!\])/;
+      const parsedProps = reportContent
+        .split("\n")
+        .map(line => {
+          const m = line.match(dataRowRegex);
+          if (!m) return null;
+          const [, name, valueStr, thresholdStr, rawStatus] = m;
           return {
-              name: property,
-              value: value,
-              threshold: thresholdStr,
-              status: status
+            name,
+            value: parseFloat(valueStr),
+            threshold: thresholdStr,
+            status: rawStatus === "[!]" ? "[X]" : "[OK]" as "[OK]" | "[X]",
           };
-      });
-      
+        })
+        .filter(Boolean) as { name: string; value: number; threshold: string; status: "[OK]" | "[X]" }[];
+
       setProperties(parsedProps);
 
       // 3. Update Model Name and Status
