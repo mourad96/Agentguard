@@ -79,8 +79,9 @@ def on_alert(result: ThresholdResult) -> None:
     print(
         f"\n  [!] ALERT: '{result.check.property_name}' = {result.check.value:.4f} "
         f"(threshold: {result.threshold}, dir: {result.direction})\n"
-        f"      -> Liquidation bot may be entering a revert loop.\n"
+        f"      -> Revert-loop detected — HALTING LIQUIDATION BOT.\n"
     )
+    _HALT_EVENT.set()
 
 
 def on_intervene(result: ThresholdResult) -> None:
@@ -219,6 +220,14 @@ async def main() -> None:
             if guarded.state not in ("On_Chain_Revert", "Network_Error"):
                 guarded.log(guarded.state, "submit_tx", "On_Chain_Revert")
 
+        # Simulate escalating revert pressure: each successive round
+        # injects more error transitions, modelling a liquidation bot
+        # that encounters increasing on-chain resistance as it retries.
+        if i >= 3:
+            for _ in range(i - 2):
+                guard.log_transition("TX_Construction", "submit_tx", "On_Chain_Revert")
+                guard.log_transition("On_Chain_Revert", "fetch_data", "TX_Construction")
+
     else:
         if not _HALT_EVENT.is_set():
             print(f"\n  [#] All {len(ROUND_PROMPTS)} rounds completed without intervention.")
@@ -231,6 +240,10 @@ async def main() -> None:
     prism_path = guard.config.verification.prism_output
     if os.path.exists(prism_path):
         print(f"\n  [i] Updated PRISM model: {os.path.abspath(prism_path)}")
+
+    report_path = os.path.join(os.path.dirname(prism_path), "dashboard_report.txt")
+    if os.path.exists(report_path):
+        print(f"  [i] Dashboard report:    {os.path.abspath(report_path)}")
 
     if _HALT_EVENT.is_set():
         print("\n  [X] Bot was HALTED by AgentGuard safety intervention.")

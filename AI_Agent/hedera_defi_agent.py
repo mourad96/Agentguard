@@ -193,6 +193,10 @@ async def main() -> None:
     if os.path.exists(prism_path):
         print(f"\n  [i] Updated PRISM model: {os.path.abspath(prism_path)}")
 
+    report_path = os.path.join(os.path.dirname(prism_path), "dashboard_report.txt")
+    if os.path.exists(report_path):
+        print(f"  [i] Dashboard report:    {os.path.abspath(report_path)}")
+
     print("\n  [v] DeFi Agent demo complete.\n")
 
 

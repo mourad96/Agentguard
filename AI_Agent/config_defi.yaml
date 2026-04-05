@@ -24,6 +24,6 @@ properties:
   prob_missing_critical_action: "Pmax=? [ G !\"TX_Confirmed\" ]"
 
 safety_thresholds:
-  min_prob_success: 0.70
-  max_expected_cycles: 15.0
+  min_prob_success: 0.80
+  max_expected_cycles: 7.0
   max_prob_missing_critical: 0.2
